@@ -30,7 +30,6 @@ import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.example.rnn.data.IndexDataLoader;
 import com.omega.example.transformer.dataset.LVMPreTrainDataset;
 import com.omega.example.transformer.dataset.PreTrainDataset;
-import com.omega.example.transformer.dataset.PreTrainDataset2;
 import com.omega.example.transformer.dataset.SFTDataset;
 import com.omega.example.transformer.utils.CNChatTokenizer;
 import com.omega.example.transformer.utils.CNChatTokenizer2;
