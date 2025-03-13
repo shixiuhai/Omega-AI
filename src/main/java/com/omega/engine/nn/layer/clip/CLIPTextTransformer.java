@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.normalization.LNLayer;
@@ -40,8 +39,6 @@ public class CLIPTextTransformer extends Layer{
 	private List<CLIPEncoderLayer> encoders;
 	private LNLayer finalLayerNorm;
 
-	private BaseKernel baseKernel;
-	
 	private Tensor imageEncoders;
 	
 	public CLIPTextTransformer(int vocabSize,int maxPositionEmbeddings,int n_layers,int headNum,int time,int embedDim,boolean bias) {
@@ -68,7 +65,7 @@ public class CLIPTextTransformer extends Layer{
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.time = time;
 		this.embedDim = embedDim;
@@ -93,10 +90,6 @@ public class CLIPTextTransformer extends Layer{
 		}
 		
 		finalLayerNorm = new LNLayer(getEncoders().get(n_layers - 1));
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
 		
 	}
 	

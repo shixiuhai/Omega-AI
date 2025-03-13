@@ -6,8 +6,8 @@ import java.util.Scanner;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.gpu.CUDAManager;
 import com.omega.engine.gpu.CUDAMemoryManager;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.gpu.SoftmaxKernel;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.layer.gpu.RoPEKernel;
@@ -206,7 +206,7 @@ public class LlavaTest {
 					Tensor sin = pos[1];
 					Tensor output = network.forward(clipVision.getEncoder().getImageEncoders(), indice, cos, sin, input);
 					output.syncHost();
-					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 8);
+					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 8, network.cudaManager);
 					idx = Arrays.copyOf(idx, idx.length + 1);
 					idx[idx.length - 1] = nextIDX;
 					if(nextIDX == tokenizer.eos) {
@@ -314,7 +314,7 @@ public class LlavaTest {
 					Tensor sin = pos[1];
 					Tensor output = network.forward(clipVision.getEncoder().getImageEncoders(), indice, cos, sin, input);
 					output.syncHost();
-					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 3);
+					int nextIDX = output2NextIDXTopN(output, idx.length - 1, 3, network.cudaManager);
 					idx = Arrays.copyOf(idx, idx.length + 1);
 					idx[idx.length - 1] = nextIDX;
 					if(nextIDX == tokenizer.eos) {
@@ -336,8 +336,8 @@ public class LlavaTest {
 		
 	}
 	
-	public static int output2NextIDXTopN(Tensor output,int nextTokenIdx,int topK) {
-		SoftmaxKernel kernel = new SoftmaxKernel();
+	public static int output2NextIDXTopN(Tensor output,int nextTokenIdx,int topK,CUDAManager cudaManager) {
+		SoftmaxKernel kernel = new SoftmaxKernel(cudaManager);
 		Tensor tmp = new Tensor(1, 1, 1, output.width, true);
 		Tensor prof = new Tensor(1, 1, 1, output.width, true);
 		if(nextTokenIdx < output.number) {
@@ -381,7 +381,7 @@ public class LlavaTest {
 		
 		try {
 
-			CUDAModules.initContext();
+//			CUDAModules.initContext();
 			
 //			llava_pertrain();
 			

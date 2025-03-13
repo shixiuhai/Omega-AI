@@ -3,7 +3,6 @@ package com.omega.example.bp.test;
 import com.omega.common.utils.DataLoader;
 import com.omega.common.utils.JsonUtils;
 import com.omega.engine.gpu.CUDAMemoryManager;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.SoftmaxWithCrossEntropyLoss;
 import com.omega.engine.nn.data.DataSet;
 import com.omega.engine.nn.layer.DropoutLayer;
@@ -25,16 +24,16 @@ public class BPTest {
 		/**
 		 * 读取训练数据集
 		 */
-		String iris_train = "H:/dataset\\iris\\iris.txt";
+		String iris_train = "H:\\dataset\\iris\\iris.txt";
 		
-		String iris_test = "H:/dataset\\iris\\iris_test.txt";
+		String iris_test = "H:\\dataset\\iris\\iris_test.txt";
 		
 		String[] labelSet = new String[] {"1","-1"};
 		
 		DataSet trainData = DataLoader.loalDataByTxt(iris_train, ",", 1, 1, 4, 2, labelSet);
 		DataSet testData = DataLoader.loalDataByTxt(iris_test, ",", 1, 1, 4, 2, labelSet);
 
-		System.out.println("train_data:"+JsonUtils.toJson(trainData));
+//		System.out.println("train_data:"+JsonUtils.toJson(trainData));
 		
 		BPNetwork netWork = new BPNetwork(new SoftmaxWithCrossEntropyLoss(), UpdaterType.adamw);
 		
@@ -92,13 +91,13 @@ public class BPTest {
 		/**
 		 * 读取训练数据集
 		 */
-		String mnist_train_data = "C:\\Users\\Administrator\\Desktop\\dataset\\mnist\\train-images.idx3-ubyte";
+		String mnist_train_data = "H:\\omega\\20240716\\omega-ai\\src\\main\\resources\\dataset\\mnist\\train-images.idx3-ubyte";
 		
-		String mnist_train_label = "C:\\Users\\Administrator\\Desktop\\dataset\\mnist\\train-labels.idx1-ubyte";
+		String mnist_train_label = "H:\\omega\\20240716\\omega-ai\\src\\main\\resources\\dataset\\mnist\\train-labels.idx1-ubyte";
 		
-		String mnist_test_data = "C:\\Users\\Administrator\\Desktop\\dataset\\mnist\\t10k-images.idx3-ubyte";
+		String mnist_test_data = "H:\\omega\\20240716\\omega-ai\\src\\main\\resources\\dataset\\mnist\\t10k-images.idx3-ubyte";
 		
-		String mnist_test_label = "C:\\Users\\Administrator\\Desktop\\dataset\\mnist\\t10k-labels.idx1-ubyte";
+		String mnist_test_label = "H:\\omega\\20240716\\omega-ai\\src\\main\\resources\\dataset\\mnist\\t10k-labels.idx1-ubyte";
 		
 		String[] labelSet = new String[] {"0","1","2","3","4","5","6","7","8","9"};
 		
@@ -193,7 +192,7 @@ public class BPTest {
 
 		try {
 
-	    	CUDAModules.initContext();
+//	    	CUDAModules.initContext();
 
 //	    	bpNetwork_iris();
 	    	bpNetwork_mnist();

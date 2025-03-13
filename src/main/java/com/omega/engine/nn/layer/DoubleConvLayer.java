@@ -2,7 +2,6 @@ package com.omega.engine.nn.layer;
 
 import com.omega.common.data.Tensor;
 import com.omega.engine.active.ActiveType;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.active.ActiveFunctionLayer;
 import com.omega.engine.nn.layer.active.LeakyReluLayer;
 import com.omega.engine.nn.layer.active.ReluLayer;
@@ -43,8 +42,6 @@ public class DoubleConvLayer extends Layer{
 	private ActiveFunctionLayer activeLayer2;
 	
 	private ActiveType activeType;
-	
-	private BaseKernel baseKernel;
 	
 	public DoubleConvLayer(int channel,int oChannel,int height,int width, ActiveType activeType, Network network) {
 		this.network = network;
@@ -102,10 +99,10 @@ public class DoubleConvLayer extends Layer{
 		}
 		
 		convLayer = new ConvolutionLayer(channel, midChannel, width, height, 3, 3, 1, 1, false, this.network, activeType);
-		convLayer.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		convLayer.setUpdater(UpdaterFactory.create(this.network));
 		
 		convLayer2 = new ConvolutionLayer(midChannel, oChannel, width, height, 3, 3, 1, 1, false, this.network, activeType);
-		convLayer2.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		convLayer2.setUpdater(UpdaterFactory.create(this.network));
 		
 		bnLayer = new BNLayer(convLayer);
 		bnLayer2 = new BNLayer(convLayer2);
@@ -137,9 +134,6 @@ public class DoubleConvLayer extends Layer{
 			throw new RuntimeException("The doubleConv layer is not support the ["+activeType+"] active function.");
 		}
 		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
 //		System.out.println("activeLayer.preLayer:"+activeLayer.preLayer);
 	}
 

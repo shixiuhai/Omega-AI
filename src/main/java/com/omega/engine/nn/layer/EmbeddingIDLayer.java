@@ -41,7 +41,7 @@ public class EmbeddingIDLayer extends Layer{
 	public EmbeddingIDLayer(int num_embeddings,int embedding_dim,Network network) {
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.channel = 1;
 		this.height = 1;
@@ -59,7 +59,7 @@ public class EmbeddingIDLayer extends Layer{
 		this.network = network;
 		this.freeze = freeze;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.channel = 1;
 		this.height = 1;
@@ -103,7 +103,7 @@ public class EmbeddingIDLayer extends Layer{
 	public void initParam() {
 		// TODO Auto-generated method stub
 		if(kernel == null) {
-			kernel = new EmbeddingKernel();
+			kernel = new EmbeddingKernel(cuda());
 		}
 		this.weight = new Tensor(1, 1, width, oWidth, RandomUtils.kaiming_uniform(this.width * this.oWidth, this.width, this.paramsInit), true);
 //		this.weight = new Tensor(1, 1, width, oWidth, MatrixUtils.order(this.width * this.oWidth, 0.001f, 0.001f), true);
@@ -172,6 +172,7 @@ public class EmbeddingIDLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
+
 		if(!this.freeze) {
 			if(accDW != null) {
 				this.accDW.copy(diffW);
@@ -302,6 +303,18 @@ public class EmbeddingIDLayer extends Layer{
 		
 		ModelUtils.loadParams(inputStream, weight);
 
+	}
+	
+	public void putParamters() {
+		
+		this.network.addPamamter(weight);
+		
+	}
+	
+	public void putParamterGrads() {
+		
+		this.network.addDeltaParamters(diffW);
+		
 	}
 	
 	public static float[] outer(float[] a,float[] b) {

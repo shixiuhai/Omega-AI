@@ -51,15 +51,23 @@ public class GPUOP {
 	public GPUOP() {
 		// TODO Auto-generated constructor stub
 		this.handle = new cublasHandle();
-		cublasCreate(handle);
+		cublasCreate(getHandle());
+	}
+	
+	public GPUOP(int deviceId) {
+		// TODO Auto-generated constructor stub
+		CUDAManager.checkCUDA(JCuda.cudaSetDevice(deviceId));
+		this.handle = new cublasHandle();
+		init();
+		this.generator = getGenerator();
 	}
 	
 	public void init() {
-		cublasCreate(handle);
+		cublasCreate(getHandle());
 	}
 	
 	public void clear() {
-		cublasDestroy(handle);
+		cublasDestroy(getHandle());
 	}
 	
 	public curandGenerator getGenerator() {
@@ -97,7 +105,7 @@ public class GPUOP {
         Pointer zero = Pointer.to(new float[]{ 0.0f });
         Pointer one = Pointer.to(new float[]{ 1.0f });
 
-        int status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, ko, xm, xn, one, 
+        int status = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, ko, xm, xn, one, 
             dB, ko, dA, xn, zero, dC, ko);
 
 //        cudaDeviceSynchronize();
@@ -214,7 +222,7 @@ public class GPUOP {
             Pointer zero = Pointer.to(new float[]{ 0.0f });
             Pointer one = Pointer.to(new float[]{ 1.0f });
 
-            int status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
+            int status = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
                 dB, k, dA, n, zero, dC, k);
             
             cudaDeviceSynchronize();
@@ -270,7 +278,7 @@ public class GPUOP {
             Pointer zero = Pointer.to(new float[]{ 0.0f });
             Pointer one = Pointer.to(new float[]{ 1.0f });
 
-            int status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
+            int status = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
                 dB, k, dA, n, zero, dC, k);
             
 //            cudaDeviceSynchronize();
@@ -298,7 +306,7 @@ public class GPUOP {
             int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
             int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
 //            System.out.println(lda+":"+ldb);
-            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, dB, ldb, dA, lda, zero, dC, n);
+            int status = cublasSgemm(getHandle(), CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, one, dB, ldb, dA, lda, zero, dC, n);
             cublasGetVector(C.length, Sizeof.FLOAT, dC, 1, Pointer.to(C), 1);
             
 		} catch (Exception e) {
@@ -318,7 +326,7 @@ public class GPUOP {
             int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
             int ldb = CUBLAS_OP_N_B == CUBLAS_OP_N ? n : k;
 
-            int status = cublasSgemm(handle, CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
+            int status = cublasSgemm(getHandle(), CUBLAS_OP_N_B, CUBLAS_OP_A, n, m, k, alphaP, 
                 dB, ldb, dA, lda, betaP, dC, n);
             checkCUBLASResult(status);
 //            cudaDeviceSynchronize();
@@ -349,7 +357,7 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
             
-            int status = JCublas2.cublasGemmEx(handle, transb, transa, n, m, k, alphaP, B, cudaDataType.CUDA_R_32F,
+            int status = JCublas2.cublasGemmEx(getHandle(), transb, transa, n, m, k, alphaP, B, cudaDataType.CUDA_R_32F,
             		ldb, A, cudaDataType.CUDA_R_32F, lda, betaP, C, cudaDataType.CUDA_R_32F, ldc,
             		cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
             checkCUBLASResult(status);
@@ -366,7 +374,7 @@ public class GPUOP {
     	try {
 	    	Pointer alphaP = Pointer.to(new float[]{ alpha });
 	        Pointer betaP = Pointer.to(new float[]{ beta });
-	        int status = JCublas2.cublasSgemv(handle, trans_A, N, M, alphaP, A.getGpuData(), N, X.getGpuData(), 1, betaP, Y.getGpuData(), 1);
+	        int status = JCublas2.cublasSgemv(getHandle(), trans_A, N, M, alphaP, A.getGpuData(), N, X.getGpuData(), 1, betaP, Y.getGpuData(), 1);
     	} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -381,13 +389,13 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
             if (!trans_A && !trans_B) {
-            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, alphaP, b, n, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+            	JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, alphaP, b, n, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
             }else if (!trans_A && trans_B) {
-            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, n, m, k, alphaP, b, k, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+            	JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_T, CUBLAS_OP_N, n, m, k, alphaP, b, k, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
             }else if (trans_A && !trans_B) {
-            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_T, n, m, k, alphaP, b, n, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+            	JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_N, CUBLAS_OP_T, n, m, k, alphaP, b, n, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
             }else if (trans_A && trans_B) {
-            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+            	JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
             }
         }else{
             float alpha = (float) Math.sqrt(1.0/scaler);
@@ -395,13 +403,13 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
             if (!trans_A && !trans_B) {
-            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, alphaP, b, n, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+            	JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, alphaP, b, n, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
     		}else if (!trans_A && trans_B) {
-    			JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_N, n, m, k, alphaP, b, k, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
+    			JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_T, CUBLAS_OP_N, n, m, k, alphaP, b, k, n*k, a, k, m*k, betaP, c, n, m*n, batch_size);
     		}else if (trans_A && !trans_B) {
-    			JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_N, CUBLAS_OP_T, n, m, k, alphaP, b, n, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+    			JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_N, CUBLAS_OP_T, n, m, k, alphaP, b, n, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
             }else if (trans_A && trans_B) {
-            	JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
+            	JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_T, CUBLAS_OP_T, n, m, k, alphaP, b, k, n*k, a, m, m*k, betaP, c, n, m*n, batch_size);
         	}
         }
     }
@@ -416,7 +424,7 @@ public class GPUOP {
         int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
         int ldb = CUBLAS_OP_B == CUBLAS_OP_N ? n : k;
 
-        int status = JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
+        int status = JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
         		n * k, dA, lda, m * k, betaP, dC, n, m * n, batch_size);
         checkCUBLASResult(status);
     }
@@ -429,7 +437,7 @@ public class GPUOP {
         int lda = CUBLAS_OP_A == CUBLAS_OP_N ? k : m;
         int ldb = CUBLAS_OP_B == CUBLAS_OP_N ? n : k;
 
-        int status = JCublas2.cublasSgemmStridedBatched(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
+        int status = JCublas2.cublasSgemmStridedBatched(getHandle(), CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, dB, ldb,
         		n * k, dA, lda, m * k, betaP, dC, n, m * n, batch_size);
         checkCUBLASResult(status);
     }
@@ -454,7 +462,7 @@ public class GPUOP {
 
         Pointer alphaP = Pointer.to(new float[]{ alpha });
         Pointer betaP = Pointer.to(new float[]{ beta });
-        int status = JCublas2.cublasSgemmStridedBatched(handle, transa, transb, m, n, k, alphaP, A, lda,
+        int status = JCublas2.cublasSgemmStridedBatched(getHandle(), transa, transb, m, n, k, alphaP, A, lda,
         		strideA, B, ldb, strideB, betaP, C, ldc, strideC, batchCount);
         checkCUBLASResult(status);
 
@@ -481,7 +489,7 @@ public class GPUOP {
         Pointer alphaP = Pointer.to(new float[]{ alpha });
         Pointer betaP = Pointer.to(new float[]{ beta });
         
-        int status = JCublas2.cublasGemmStridedBatchedEx(handle, transa, transb, m, n, k, alphaP, A, cudaDataType.CUDA_R_32F,
+        int status = JCublas2.cublasGemmStridedBatchedEx(getHandle(), transa, transb, m, n, k, alphaP, A, cudaDataType.CUDA_R_32F,
         		lda, strideA, B, cudaDataType.CUDA_R_32F, ldb, strideB, betaP, C, cudaDataType.CUDA_R_32F, ldc, strideC,
         		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         
@@ -528,7 +536,7 @@ public class GPUOP {
         
         long strideC = m * n;
         
-        int status = JCublas2.cublasGemmStridedBatchedEx(handle, transa, transb, n, m, k, alphaP, B.getGpuData(), cudaDataType.CUDA_R_32F,
+        int status = JCublas2.cublasGemmStridedBatchedEx(getHandle(), transa, transb, n, m, k, alphaP, B.getGpuData(), cudaDataType.CUDA_R_32F,
         		ldb, strideB, A.getGpuData(), cudaDataType.CUDA_R_32F, lda, strideA, betaP, C.getGpuData(), cudaDataType.CUDA_R_32F, ldc, strideC,
         		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         
@@ -571,7 +579,7 @@ public class GPUOP {
         
         long strideC = m * n;
         
-        int status = JCublas2.cublasGemmStridedBatchedEx(handle, transb, transa, n, m, k, alphaP, B.getGpuData(), cudaDataType.CUDA_R_32F,
+        int status = JCublas2.cublasGemmStridedBatchedEx(getHandle(), transb, transa, n, m, k, alphaP, B.getGpuData(), cudaDataType.CUDA_R_32F,
         		ldb, strideB, A.getGpuData(), cudaDataType.CUDA_R_32F, lda, strideA, betaP, C.getGpuData(), cudaDataType.CUDA_R_32F, ldc, strideC,
         		batchCount, cudaDataType.CUDA_R_32F, cublasGemmAlgo.CUBLAS_GEMM_DEFAULT_TENSOR_OP);
         
@@ -607,7 +615,7 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
 
-            int status = cublasSgemm(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, 
+            int status = cublasSgemm(getHandle(), CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, 
                     dB, ldb, dA, lda, betaP, dC, n);
              
             cudaDeviceSynchronize();
@@ -649,7 +657,7 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
 
-            int status = cublasSgemm(handle, CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, 
+            int status = cublasSgemm(getHandle(), CUBLAS_OP_B, CUBLAS_OP_A, n, m, k, alphaP, 
                     dB, ldb, dA, lda, betaP, dC, ldc);
              
             cudaDeviceSynchronize();
@@ -673,7 +681,7 @@ public class GPUOP {
             Pointer alphaP = Pointer.to(new float[]{ alpha });
             Pointer betaP = Pointer.to(new float[]{ beta });
             
-            int status = JCublas2.cublasSgemv(handle, CUBLAS_OP_A, n, m, alphaP, dA, n, dx, 1, betaP, dy, 1);
+            int status = JCublas2.cublasSgemv(getHandle(), CUBLAS_OP_A, n, m, alphaP, dA, n, dx, 1, betaP, dy, 1);
             
             cudaDeviceSynchronize();
             
@@ -728,7 +736,7 @@ public class GPUOP {
         Pointer zero = Pointer.to(new float[]{0.0f});
         Pointer one = Pointer.to(new float[]{1.0f});
 
-        JCublas2.cublasSgemmBatched(handle, CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, d_Barray, k, d_Aarray, n, zero, d_Carray, k, N);
+        JCublas2.cublasSgemmBatched(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, d_Barray, k, d_Aarray, n, zero, d_Carray, k, N);
         
         cudaDeviceSynchronize();
         
@@ -784,7 +792,7 @@ public class GPUOP {
     public void multiplyDouble( int m,int n,int k, double A[],
 			double B[], double C[])
     {
-    	cublasCreate(handle);
+    	cublasCreate(getHandle());
         Pointer dA = new Pointer();
         Pointer dB = new Pointer();
         Pointer dC = new Pointer();
@@ -798,7 +806,7 @@ public class GPUOP {
 
         Pointer zero = Pointer.to(new float[]{ 0.0f });
         Pointer one = Pointer.to(new float[]{ 1.0f });
-        int status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
+        int status = cublasSgemm(getHandle(), CUBLAS_OP_N, CUBLAS_OP_N, k, m, n, one, 
             dB, k, dA, n, zero, dC, k);
 
         cudaDeviceSynchronize();
@@ -809,7 +817,7 @@ public class GPUOP {
         cudaFree(dC);
 
         // Clean up
-        cublasDestroy(handle);
+        cublasDestroy(getHandle());
     }
     
     public static GPUOP getInstance() {
@@ -874,7 +882,7 @@ public class GPUOP {
 
 //    	test();
     	
-    	testBatch();
+//    	testBatch();
     	
     }
     
@@ -964,7 +972,7 @@ public class GPUOP {
         return sb.toString();
     }
     
-    private static int checkCUBLASResult(int result)
+    public static int checkCUBLASResult(int result)
     {
         if (result != cublasStatus.CUBLAS_STATUS_SUCCESS)
         {	
@@ -983,5 +991,9 @@ public class GPUOP {
         }
         return result;
     }
+
+	public cublasHandle getHandle() {
+		return handle;
+	}
     
 }

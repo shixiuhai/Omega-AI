@@ -7,7 +7,6 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -48,8 +47,6 @@ public class LlamaTransformerDecoder extends Layer{
 	private RMSLayer norm;
 	private DropoutLayer dropoutLayer;
 	
-	private BaseKernel baseKernel;
-	
 	public LlamaTransformerDecoder(int vocab_size,int n_layers,int headNum,int time,int embedDim,int multiple_of,boolean bias,boolean dropout) {
 		this.headNum = headNum;
 		this.nKVHeadNum = headNum;
@@ -77,7 +74,7 @@ public class LlamaTransformerDecoder extends Layer{
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -101,7 +98,7 @@ public class LlamaTransformerDecoder extends Layer{
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -134,10 +131,6 @@ public class LlamaTransformerDecoder extends Layer{
 		
 		if(dropout) {
 			dropoutLayer = new DropoutLayer(0.1f, getSrc_emb());
-		}
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
 		}
 		
 	}
@@ -355,6 +348,30 @@ public class LlamaTransformerDecoder extends Layer{
 		}
 		
 		getNorm().loadModel(inputStream);
+		
+	}
+	
+	public void putParamters() {
+		
+		getSrc_emb().putParamters();
+		
+		for(int i = 0;i<n_layers;i++) {
+			getDecoderLayers().get(i).putParamters();
+		}
+		
+		getNorm().putParamters();
+		
+	}
+	
+	public void putParamterGrads() {
+		
+		getSrc_emb().putParamterGrads();
+		
+		for(int i = 0;i<n_layers;i++) {
+			getDecoderLayers().get(i).putParamterGrads();
+		}
+		
+		getNorm().putParamterGrads();
 		
 	}
 

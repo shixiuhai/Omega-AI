@@ -7,7 +7,6 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.FullyLayer;
@@ -57,8 +56,6 @@ public class LlavaTransformerDecoder extends Layer{
 	private RMSLayer norm;
 	private DropoutLayer dropoutLayer;
 	
-	private BaseKernel baseKernel;
-	
 	private Tensor tiTokens;
 	
 	private Tensor versionProjDelta;
@@ -92,7 +89,7 @@ public class LlavaTransformerDecoder extends Layer{
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -118,7 +115,7 @@ public class LlavaTransformerDecoder extends Layer{
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -155,10 +152,6 @@ public class LlavaTransformerDecoder extends Layer{
 		
 		if(dropout) {
 			dropoutLayer = new DropoutLayer(0.1f, getSrc_emb());
-		}
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
 		}
 		
 	}
@@ -202,7 +195,7 @@ public class LlavaTransformerDecoder extends Layer{
 		
 		getVersionProj().forward(imageEncode);
 
-		baseKernel.replace_channel_forward(src_emb.getOutput(), getVersionProj().getOutput(), tiTokens, indices, imageTime, batchSize, time, 1, embedDim);
+		this.network.baseKernel.replace_channel_forward(src_emb.getOutput(), getVersionProj().getOutput(), tiTokens, indices, imageTime, batchSize, time, 1, embedDim);
 		
 		Tensor out1 = tiTokens;
 //		out1.showDMByOffset(0, 100);
@@ -256,7 +249,7 @@ public class LlavaTransformerDecoder extends Layer{
 			decoderDiff = dropoutLayer.diff;
 		}
 		
-		baseKernel.replace_channel_backward(decoderDiff, versionProjDelta, indices, imageTime, batchSize, time, 1, embedDim);
+		this.network.baseKernel.replace_channel_backward(decoderDiff, versionProjDelta, indices, imageTime, batchSize, time, 1, embedDim);
 		
 		getVersionProj().back(versionProjDelta);
 		

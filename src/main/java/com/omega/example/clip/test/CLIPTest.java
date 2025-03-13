@@ -4,8 +4,8 @@ import com.omega.common.data.Tensor;
 import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAManager;
 import com.omega.engine.gpu.CUDAMemoryManager;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.LossType;
 import com.omega.engine.nn.network.ClipText;
 import com.omega.engine.nn.network.ClipVision;
@@ -20,7 +20,9 @@ public class CLIPTest {
 	
 	public static void replace_test() {
 		
-		BaseKernel kenel = new BaseKernel();
+		CUDAManager cudaManager = new CUDAManager(0);
+		
+		BaseKernel kenel = new BaseKernel(cudaManager);
 		
 		int B = 16;
 		int C = 512;
@@ -205,8 +207,6 @@ public class CLIPTest {
 		
 		try {
 
-			CUDAModules.initContext();
-			
 //			clip_test();
 			
 //			replace_test();

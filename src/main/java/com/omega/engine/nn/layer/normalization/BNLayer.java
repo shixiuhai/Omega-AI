@@ -51,7 +51,7 @@ public class BNLayer extends NormalizationLayer {
 	public BNLayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 		this.hasParams = true;
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	public BNLayer(Network network) {
@@ -65,7 +65,7 @@ public class BNLayer extends NormalizationLayer {
 		this.network = network;
 		this.bnType = bnType;
 		network.paramLayers.add(this);
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	@Override
@@ -117,12 +117,12 @@ public class BNLayer extends NormalizationLayer {
 		
 		if(kernel == null) {
 			if(this.network.CUDNN) {
-				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar);
+				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar, cuda());
 			}else {
 				if(this.getBnType() == BNType.fully_bn) {
-					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar);
+					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar, cuda());
 				}else {
-					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar);
+					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar, cuda());
 				}
 			}
 		}
@@ -189,12 +189,12 @@ public class BNLayer extends NormalizationLayer {
 		
 		if(kernel == null) {
 			if(this.network.CUDNN) {
-				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar);
+				kernel = new BNCudnnKernel(this.getBnType(), channel, height, width, this.runingMean, this.runingVar, cuda());
 			}else {
 				if(this.getBnType() == BNType.fully_bn) {
-					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar);
+					kernel = new BNKernel3(width, 1, 1, this.runingMean, this.runingVar, cuda());
 				}else {
-					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar);
+					kernel = new BNKernel3(channel, height, width, this.runingMean, this.runingVar, cuda());
 				}
 			}
 		}

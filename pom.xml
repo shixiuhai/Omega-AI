@@ -97,7 +97,7 @@
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
-			<version>2.8.5</version>
+			<version>2.10.1</version>
 		</dependency>
 		<!-- json utils -->
 		
@@ -127,111 +127,29 @@
         
 	</dependencies>
 
-
-	<profiles>
-		<profile>
-			<id>release</id>
-			<build>
-				<plugins>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-javadoc-plugin</artifactId>
-						<version>3.6.3</version>
-						<configuration>
-							<encoding>UTF-8</encoding>
-							<charset>UTF-8</charset>
-							<docencoding>UTF-8</docencoding>
-							<additionalOptions>-Xdoclint:none</additionalOptions>
-						</configuration>
-						<executions>
-							<execution>
-								<id>attach-javadocs</id>
-								<goals>
-									<goal>jar</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-source-plugin</artifactId>
-						<version>3.3.0</version>
-						<executions>
-							<execution>
-								<id>attach-sources</id>
-								<goals>
-									<goal>jar</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-release-plugin</artifactId>
-						<version>3.0.1</version>
-						<configuration>
-							<autoVersionSubmodules>true</autoVersionSubmodules>
-							<mavenExecutorId>forked-path</mavenExecutorId>
-							<useReleaseProfile>false</useReleaseProfile>
-						</configuration>
-					</plugin>
-
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-enforcer-plugin</artifactId>
-						<version>3.4.1</version>
-						<executions>
-							<execution>
-								<id>enforce-no-snapshots</id>
-								<goals>
-									<goal>enforce</goal>
-								</goals>
-								<configuration>
-									<rules>
-										<requireReleaseDeps>
-											<message>No Snapshots Allowed!</message>
-											<onlyWhenRelease>true</onlyWhenRelease>
-										</requireReleaseDeps>
-									</rules>
-									<fail>true</fail>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>3.1.0</version>
-						<configuration>
-							<gpgArguments>
-								<arg>--batch</arg>
-							</gpgArguments>
-						</configuration>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>org.sonatype.central</groupId>
-						<artifactId>central-publishing-maven-plugin</artifactId>
-						<version>0.4.0</version>
-						<extensions>true</extensions>
-						<configuration>
-							<publishingServerId>central</publishingServerId>
-							<tokenAuth>true</tokenAuth>
-							<autoPublish>true</autoPublish>
-							<waitUntil>validated</waitUntil>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-	</profiles>
-
+	<build>
+	    <plugins>
+	        <plugin>
+	            <groupId>org.apache.maven.plugins</groupId>
+	            <artifactId>maven-shade-plugin</artifactId>
+	            <version>3.2.1</version>
+	            <executions>
+	                <execution>
+	                    <phase>package</phase>
+	                    <goals>
+	                        <goal>shade</goal>
+	                    </goals>
+	                    <configuration>
+	                        <transformers>
+	                            <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+	                                <mainClass>com.omega.engine.ddp.distributed.ClientSocketDemo</mainClass> <!-- 修改为你的 main 类 -->
+	                            </transformer>
+	                        </transformers>
+	                    </configuration>
+	                </execution>
+	            </executions>
+	        </plugin>
+	    </plugins>
+	</build>	
+		
 </project>

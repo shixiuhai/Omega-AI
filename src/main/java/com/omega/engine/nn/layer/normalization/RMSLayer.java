@@ -52,27 +52,27 @@ public class RMSLayer extends NormalizationLayer {
 	public RMSLayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 		this.hasParams = false;
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	public RMSLayer(Layer preLayer,boolean hasBias) {
 		this.setPreLayer(preLayer);
 		this.hasBias = false;
 		this.hasParams = false;
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	public RMSLayer(Network network) {
 		this.network = network;
 		network.paramLayers.add(this);
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	public RMSLayer(Network network,boolean hasBias) {
 		this.network = network;
 		this.hasBias = false;
 		network.paramLayers.add(this);
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	@Override
@@ -113,7 +113,7 @@ public class RMSLayer extends NormalizationLayer {
 		}
 
 		if(kernel == null) {
-			kernel = new RMSKernel(width, bnType);
+			kernel = new RMSKernel(width, bnType, cuda());
 		}
 		
 		if(this.gamma == null) {
@@ -148,7 +148,7 @@ public class RMSLayer extends NormalizationLayer {
 		}
 
 		if(kernel == null) {
-			kernel = new RMSKernel(width, bnType);
+			kernel = new RMSKernel(width, bnType, cuda());
 		}
 
 		if(this.gamma == null) {
@@ -200,7 +200,7 @@ public class RMSLayer extends NormalizationLayer {
 //		System.out.println(JsonUtils.toJson(beta.shape()));
 //		kernel.forward(gamma, beta, input, output);
 //		kernel.forwardAten(gamma, beta, input, output);
-		kernel.forward2(gamma, input, output);
+		kernel.forward3(gamma, input, output);
 		
 //		System.err.println("1:");
 //		output.showDMByNumber(0);
@@ -257,7 +257,7 @@ public class RMSLayer extends NormalizationLayer {
 //		System.out.println(index);
 //		kernel.backward(input, delta, diff, gamma, diffGamma, diffBeta);
 //		kernel.backwardAten(input, delta, diff, gamma, diffGamma, diffBeta);
-		kernel.backward2(input, delta, diff, gamma, diffGamma);
+		kernel.backward3(input, delta, diff, gamma, diffGamma);
 //		diff.showDMByNumber(0);
 //		diff2.showDMByNumber(0);
 //		System.out.println((System.nanoTime() - start) / 1e6 + "ms.");
@@ -392,6 +392,15 @@ public class RMSLayer extends NormalizationLayer {
 		init();
 		ModelUtils.loadParams(inputStream, gamma);
 		
+	}
+	
+	public void putParamters() {
+		init();
+		this.network.addPamamter(gamma);
+	}
+	
+	public void putParamterGrads() {
+		this.network.addDeltaParamters(diffGamma);
 	}
 	
 	@Override

@@ -5,7 +5,6 @@ import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
@@ -53,7 +52,7 @@ public class BertEmbeddingsLayer extends Layer{
 	public BertEmbeddingsLayer(int vocabSize,int hiddenSize,int maxPositionEmbeddingsSize,int typeVocabSize,Network network) {
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.vocabSize = vocabSize;
 		this.typeVocabSize = typeVocabSize;
@@ -119,8 +118,8 @@ public class BertEmbeddingsLayer extends Layer{
 		
 		tokenTypeEmbeddings.forward(tokenIds);
 		
-		TensorOP.add(wordEmbeddings.getOutput(), positionEmbeddings.getOutput(), wordEmbeddings.getOutput());
-		TensorOP.add(wordEmbeddings.getOutput(), tokenTypeEmbeddings.getOutput(), wordEmbeddings.getOutput());
+		Tensor_OP().add(wordEmbeddings.getOutput(), positionEmbeddings.getOutput(), wordEmbeddings.getOutput());
+		Tensor_OP().add(wordEmbeddings.getOutput(), tokenTypeEmbeddings.getOutput(), wordEmbeddings.getOutput());
 
 		norm.forward(wordEmbeddings.getOutput());
 

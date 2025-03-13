@@ -1,8 +1,6 @@
 package com.omega.engine.nn.layer.vae;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.ad.op.TensorOP;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
@@ -44,8 +42,6 @@ public class VAEResnetBlock extends Layer {
 	
 	private float outputScale = 1.0f;
 	
-	private BaseKernel baseKernel;
-	
 	private Tensor cache_delta;
 	
 	public VAEResnetBlock(int channel,int oChannel,int height,int width,int group,float outputScale, Network network) {
@@ -61,10 +57,8 @@ public class VAEResnetBlock extends Layer {
 			shortcut = true;
 		}
 		
-		kernel = new BasicBlockKernel();
+		kernel = new BasicBlockKernel(cuda());
 		
-		baseKernel = new BaseKernel();
-
 		initLayers();
 		
 		this.oHeight = conv2.oHeight;
@@ -77,19 +71,19 @@ public class VAEResnetBlock extends Layer {
 		a1 = new SiLULayer(norm1);
 		
 		conv1 = new ConvolutionLayer(channel, oChannel, width, height, 3, 3, 1, 1, false, this.network);
-		conv1.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		conv1.setUpdater(UpdaterFactory.create(this.network));
 		conv1.paramsInit = ParamsInit.silu;
 		
 		norm2 = new GNLayer(group, conv1);
 		a2 = new SiLULayer(norm2);
 		
 		conv2 = new ConvolutionLayer(conv1.oChannel, oChannel, conv1.oWidth, conv1.oHeight, 3, 3, 1, 1, false, this.network);
-		conv2.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		conv2.setUpdater(UpdaterFactory.create(this.network));
 		conv2.paramsInit = ParamsInit.silu;
 
 		if(shortcut) {
 			conv_shortcut = new ConvolutionLayer(channel, oChannel, width, height, 1, 1, 0, 1, false, this.network); 
-			conv_shortcut.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+			conv_shortcut.setUpdater(UpdaterFactory.create(this.network));
 			conv_shortcut.paramsInit = ParamsInit.silu;
 		}
 
@@ -137,7 +131,7 @@ public class VAEResnetBlock extends Layer {
 		}
 		
 		if(outputScale != 1.0f) {
-			TensorOP.div(output, outputScale, output);
+			Tensor_OP().div(output, outputScale, output);
 		}
 
 	}
@@ -156,9 +150,9 @@ public class VAEResnetBlock extends Layer {
 		 * deltax = deltao * (f'(x) + 1)
 		 */
 		if(outputScale != 1.0f) {
-			TensorOP.div(delta, outputScale, delta);
+			Tensor_OP().div(delta, outputScale, delta);
 		}
-		baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
+		baseKernel().copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
 
 		conv2.back(delta);
 		a2.back(conv2.diff);

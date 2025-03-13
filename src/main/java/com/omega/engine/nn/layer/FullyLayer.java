@@ -6,7 +6,6 @@ import java.io.RandomAccessFile;
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.nn.layer.gpu.FullyKernel;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.utils.ModelUtils;
@@ -27,6 +26,12 @@ public class FullyLayer extends Layer{
 	private FullyKernel kernel;
 	
 //	private FullyCudnnKernel cudnnKernel;
+	
+//	private cudaStream_t defaultStream;
+//	
+//	private cudaStream_t dwStream;
+//	
+//	private cudaStream_t dxStream;
 	
 	public FullyLayer(int inputNum,int outputNum) {
 		this.channel = 1;
@@ -63,7 +68,7 @@ public class FullyLayer extends Layer{
 		this.hasParams = true;
 		this.initParam();
 		network.paramLayers.add(this);
-		this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(network));
 	}
 	
 	public FullyLayer(int inputNum,int outputNum,int time,boolean hasBias,Network network) {
@@ -78,7 +83,7 @@ public class FullyLayer extends Layer{
 		this.hasParams = true;
 		network.paramLayers.add(this);
 		this.initParamRNNCell();
-		this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(network));
 	}
 	
 	public static FullyLayer createRNNCell(int inputNum,int outputNum,int time,boolean hasBias,Network network) {
@@ -90,8 +95,22 @@ public class FullyLayer extends Layer{
 //			cudnnKernel = new FullyCudnnKernel(network, width, oWidth);
 //		}
 		if(kernel == null) {
-			kernel = new FullyKernel();
+			kernel = new FullyKernel(cuda());
 		}
+		
+//		if(defaultStream == null) {
+//
+//			defaultStream = new cudaStream_t();
+//			
+//			dwStream = new cudaStream_t();
+//			
+//			dxStream = new cudaStream_t();
+//			
+//			JCuda.cudaStreamCreate(dwStream);
+//			JCuda.cudaStreamCreate(dxStream);
+//			
+//		}
+		
 	}
 	
 	@Override
@@ -188,9 +207,9 @@ public class FullyLayer extends Layer{
 //		}else {
 //			if(this.input != null) {
 ////				input.showDMByNumber(0);
-////				GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, this.number, this.oWidth, this.width, 1, input.getGpuData(),
+////				GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, this.number, this.oWidth, this.width, 1, input.getGpuData(),
 ////						this.width, weight.getGpuData(), this.width, 0, output.getGpuData(), this.oWidth);
-//				GPUOP.getInstance().multiplyFloat(number, oWidth, width, input.getGpuData(), weight.getGpuData(), output.getGpuData(),
+//				GPU_OP().multiplyFloat(number, oWidth, width, input.getGpuData(), weight.getGpuData(), output.getGpuData(),
 //						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 ////				output.showDMByNumber(0);
 //			}
@@ -198,9 +217,9 @@ public class FullyLayer extends Layer{
 		
 		if(this.input != null) {
 //			input.showDMByNumber(0);
-			GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, this.number, this.oWidth, this.width, 1, input.getGpuData(),
+			GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, this.number, this.oWidth, this.width, 1, input.getGpuData(),
 					this.width, weight.getGpuData(), this.width, 0, output.getGpuData(), this.oWidth);
-//			GPUOP.getInstance().multiplyFloat(number, oWidth, width, input.getGpuData(), weight.getGpuData(), output.getGpuData(),
+//			GPU_OP().multiplyFloat(number, oWidth, width, input.getGpuData(), weight.getGpuData(), output.getGpuData(),
 //					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 //			output.showDMByNumber(0);
 		}
@@ -217,7 +236,7 @@ public class FullyLayer extends Layer{
 		
 		if(this.input != null) {
 
-			GPUOP.getInstance().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
+			GPU_OP().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
 					weight.getGpuData(), output.getGpuData().withByteOffset(step * batch * output.getOnceSize() * Sizeof.FLOAT),
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
@@ -237,7 +256,7 @@ public class FullyLayer extends Layer{
 			
 			if(inputStep >= 0) {
 
-				GPUOP.getInstance().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
+				GPU_OP().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
 						weight.getGpuData(), output.getGpuData().withByteOffset(step * batch * output.getOnceSize() * Sizeof.FLOAT),
 						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
@@ -259,7 +278,7 @@ public class FullyLayer extends Layer{
 			
 			if(inputStep >= 0) {
 
-				GPUOP.getInstance().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
+				GPU_OP().multiplyFloat(batch, oWidth, width, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
 						weight.getGpuData(), output.getGpuData().withByteOffset(step * batch * output.getOnceSize() * Sizeof.FLOAT),
 						cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
@@ -276,48 +295,8 @@ public class FullyLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		
-//		if(this.network.CUDNN){
-//			cudnnKernel.dw(input, delta, diffW);
-//			cudnnKernel.dx(delta, weight, diff);
-//		}else {
 
-			/**
-			 * deltaW = inputT * delta
-			 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
-			 * number * w
-			 * number * ow
-			 * m = w,k = number,n = ow
-			 */
-			GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1,
-					delta.getGpuData(), this.oWidth, input.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
-//			GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
-//					cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
-
-			/**
-			 * diff = delta * weightT
-			 * number * ow
-			 * w * ow
-			 * m = number,k = ow,n = w
-			 */
-			GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, this.number, this.width, this.oWidth, 1, delta.getGpuData(), this.oWidth,
-					weight.getGpuData(), this.width, 0, diff.getGpuData(), this.width);
-//			GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
-//					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
-//		}
-
-		if(hasBias) {
-			kernel.backwardBias(diffB, delta);
-		}
-//		System.out.println("------------------");
-//		System.out.println(delta.isZero());
-//		System.out.println(diff.isZero());
-//		delta.showDMByNumber(0);
-//		diff.showDMByNumber(0);
-	}
-	
-	public void diff(Tensor diff) {
-		// TODO Auto-generated method stub
+//		GPUOP.checkCUBLASResult(JCublas2.cublasGetStream(GPU_OP().getHandle(), defaultStream));
 		
 		/**
 		 * deltaW = inputT * delta
@@ -326,9 +305,45 @@ public class FullyLayer extends Layer{
 		 * number * ow
 		 * m = w,k = number,n = ow
 		 */
-		GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1,
+//		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), dwStream));
+		GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1,
 				delta.getGpuData(), this.oWidth, input.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
-//		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
+
+		/**
+		 * diff = delta * weightT
+		 * number * ow
+		 * w * ow
+		 * m = number,k = ow,n = w
+		 */
+//		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), dxStream));
+		GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, this.number, this.width, this.oWidth, 1, delta.getGpuData(), this.oWidth,
+				weight.getGpuData(), this.width, 0, diff.getGpuData(), this.width);
+		
+//		JCuda.cudaStreamSynchronize(dwStream);
+//		JCuda.cudaStreamSynchronize(dxStream);
+//		
+//		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), defaultStream));
+		
+		if(hasBias) {
+			kernel.backwardBias(diffB, delta);
+		}
+
+	}
+	
+	public void diff(Tensor diff) {
+		// TODO Auto-generated method stub
+//		GPUOP.checkCUBLASResult(JCublas2.cublasGetStream(GPU_OP().getHandle(), defaultStream));
+		/**
+		 * deltaW = inputT * delta
+		 * int m,int n,int k, float A[],float B[], float C[],int CUBLAS_OP_A,int CUBLAS_OP_B,float alpha,float beta
+		 * number * w
+		 * number * ow
+		 * m = w,k = number,n = ow
+		 */
+//		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), dwStream));
+		GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1,
+				delta.getGpuData(), this.oWidth, input.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
+//		GPU_OP().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
 //				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 0.0f);
 
 		/**
@@ -337,10 +352,15 @@ public class FullyLayer extends Layer{
 		 * w * ow
 		 * m = number,k = ow,n = w
 		 */
-		GPUOP.getInstance().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, this.number, this.width, this.oWidth, 1, delta.getGpuData(), this.oWidth,
+//		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), dxStream));
+		GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, this.number, this.width, this.oWidth, 1, delta.getGpuData(), this.oWidth,
 				weight.getGpuData(), this.width, 0, diff.getGpuData(), this.width);
-//		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
+//		GPU_OP().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
 //				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
+		
+//		JCuda.cudaStreamSynchronize(dwStream);
+//		JCuda.cudaStreamSynchronize(dxStream);
+//		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), defaultStream));
 		
 		if(hasBias) {
 			kernel.backwardBias(diffB, delta);
@@ -358,7 +378,7 @@ public class FullyLayer extends Layer{
 		 * number * ow
 		 * m = w,k = number,n = ow
 		 */
-		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
+		GPU_OP().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
 				delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT), diffW.getGpuData(),
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
 
@@ -372,7 +392,7 @@ public class FullyLayer extends Layer{
 		 * w * ow
 		 * m = number,k = ow,n = w
 		 */
-		GPUOP.getInstance().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT),
+		GPU_OP().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT),
 				weight.getGpuData(), diff.getGpuData().withByteOffset(step * batch * diff.getOnceSize() * Sizeof.FLOAT),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 
@@ -388,7 +408,7 @@ public class FullyLayer extends Layer{
 		 * number * ow
 		 * m = w,k = number,n = ow
 		 */
-		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
+		GPU_OP().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(inputStep * batch * input.getOnceSize() * Sizeof.FLOAT),
 				delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT), diffW.getGpuData(),
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
 
@@ -403,7 +423,7 @@ public class FullyLayer extends Layer{
 		 * w * ow
 		 * m = number,k = ow,n = w
 		 */
-		GPUOP.getInstance().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT),
+		GPU_OP().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(step * batch * delta.getOnceSize() * Sizeof.FLOAT),
 				weight.getGpuData(), diff.getGpuData().withByteOffset(step * batch * diff.getOnceSize() * Sizeof.FLOAT),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 
@@ -420,7 +440,7 @@ public class FullyLayer extends Layer{
 			 * number * ow
 			 * m = w,k = number,n = ow
 			 */
-			GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
+			GPU_OP().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData().withByteOffset(step * batch * input.getOnceSize() * Sizeof.FLOAT),
 					delta.getGpuData().withByteOffset(inputStep * batch * delta.getOnceSize() * Sizeof.FLOAT), diffW.getGpuData(),
 					cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
 		
@@ -435,7 +455,7 @@ public class FullyLayer extends Layer{
 			 * w * ow
 			 * m = number,k = ow,n = w
 			 */
-			GPUOP.getInstance().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(inputStep * batch * delta.getOnceSize() * Sizeof.FLOAT),
+			GPU_OP().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(inputStep * batch * delta.getOnceSize() * Sizeof.FLOAT),
 					weight.getGpuData(), diff.getGpuData().withByteOffset(step * batch * diff.getOnceSize() * Sizeof.FLOAT),
 					cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 		}
@@ -452,7 +472,7 @@ public class FullyLayer extends Layer{
 		 * number * ow
 		 * m = w,k = number,n = ow
 		 */
-		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData(),
+		GPU_OP().multiplyFloat(this.width, this.oWidth, batch, input.getGpuData(),
 				delta.getGpuData().withByteOffset(deltaStep * batch * delta.getOnceSize() * Sizeof.FLOAT), diffW.getGpuData(),
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 1.0f, 1.0f);
 
@@ -466,7 +486,7 @@ public class FullyLayer extends Layer{
 		 * w * ow
 		 * m = number,k = ow,n = w
 		 */
-		GPUOP.getInstance().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(deltaStep * batch * delta.getOnceSize() * Sizeof.FLOAT),
+		GPU_OP().multiplyFloat(batch, this.width, this.oWidth, delta.getGpuData().withByteOffset(deltaStep * batch * delta.getOnceSize() * Sizeof.FLOAT),
 				weight.getGpuData(), diff.getGpuData(),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 0.0f);
 
@@ -482,7 +502,7 @@ public class FullyLayer extends Layer{
 		 * number * ow
 		 * m = w,k = number,n = ow
 		 */
-		GPUOP.getInstance().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
+		GPU_OP().multiplyFloat(this.width, this.oWidth, this.number, input.getGpuData(), delta.getGpuData(), diffW.getGpuData(),
 				cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, 0.5f, 1.0f);
 
 		
@@ -496,7 +516,7 @@ public class FullyLayer extends Layer{
 		 * w * ow
 		 * m = number,k = ow,n = w
 		 */
-		GPUOP.getInstance().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
+		GPU_OP().multiplyFloat(this.number, this.width, this.oWidth, delta.getGpuData(), weight.getGpuData(), diff.getGpuData(),
 				cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_T, 1.0f, 1.0f);
 		
 	}
@@ -873,6 +893,20 @@ public class FullyLayer extends Layer{
 			ModelUtils.loadParams(inputStream, bias);
 		}
 		
+	}
+
+	public void putParamters() {
+		this.network.addPamamter(weight);
+		if(hasBias) {
+			this.network.addPamamter(bias);
+		}
+	}
+
+	public void putParamterGrads() {
+		this.network.addDeltaParamters(diffW);
+		if(hasBias) {
+			this.network.addDeltaParamters(diffB);
+		}
 	}
 	
 }

@@ -43,7 +43,7 @@ public class InstanceNormaliztionLayer extends NormalizationLayer {
 	public InstanceNormaliztionLayer(Layer preLayer) {
 		this.setPreLayer(preLayer);
 		this.hasParams = true;
-		this.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		this.setUpdater(UpdaterFactory.create(this.network));
 	}
 	
 	public InstanceNormaliztionLayer(Network network) {
@@ -82,7 +82,7 @@ public class InstanceNormaliztionLayer extends NormalizationLayer {
 		
 		if(kernel == null) {
 			if(this.network.CUDNN) {
-				kernel = new InstanceNormalizationCudnnKernel(channel, height, width);
+				kernel = new InstanceNormalizationCudnnKernel(channel, height, width, cuda());
 			}
 		}
 		
@@ -318,7 +318,7 @@ public class InstanceNormaliztionLayer extends NormalizationLayer {
 		
 		if(kernel == null) {
 //			if(this.network.CUDNN) {
-				kernel = new InstanceNormalizationCudnnKernel(channel, height, width);
+				kernel = new InstanceNormalizationCudnnKernel(channel, height, width, cuda());
 //			}
 		}
 		

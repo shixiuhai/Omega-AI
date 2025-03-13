@@ -7,8 +7,6 @@ import java.util.List;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.ad.op.TensorOP;
-import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.nn.layer.DropoutLayer;
 import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -45,8 +43,6 @@ public class TransformerNanoDecoder extends Layer{
 
 	private DropoutLayer dropoutLayer;
 	
-	private BaseKernel baseKernel;
-	
 	private Tensor positions;
 
 
@@ -72,7 +68,7 @@ public class TransformerNanoDecoder extends Layer{
 		this.n_layers = n_layers;
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.vocab_size = vocab_size;
 		this.time = time;
@@ -109,10 +105,6 @@ public class TransformerNanoDecoder extends Layer{
 			dropoutLayer = new DropoutLayer(0.1f, src_emb);
 		}
 		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
-
 	}
 	
 	@Override
@@ -142,7 +134,7 @@ public class TransformerNanoDecoder extends Layer{
 		
 		pos_emb.forward(positions);
 		
-		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
+		Tensor_OP().add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
 		
 		Tensor out1 = src_emb.getOutput();
 		
@@ -169,7 +161,7 @@ public class TransformerNanoDecoder extends Layer{
 		
 		pos_emb.forward(positions);
 
-		TensorOP.add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
+		Tensor_OP().add(src_emb.getOutput(), pos_emb.getOutput(), src_emb.getOutput());
 		
 		Tensor out1 = src_emb.getOutput();
 		

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
-import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.CUDAMemoryManager;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
@@ -39,7 +38,7 @@ public class BertOutputLayer extends Layer{
 	public BertOutputLayer(int intermediateSize,int hiddenSize,Network network) {
 		this.network = network;
 		if(this.updater == null) {
-			this.setUpdater(UpdaterFactory.create(network.updater, network.updaterParams));
+			this.setUpdater(UpdaterFactory.create(network));
 		}
 		this.channel = 1;
 		this.height = 1;
@@ -98,11 +97,11 @@ public class BertOutputLayer extends Layer{
 		if(network.RUN_MODEL == RunModel.EVAL) {
 			Tensor cache = CUDAMemoryManager.getCache("CLIIP_output_cache", input.number, 1, 1, oWidth);
 			linear.forward(input, cache);
-			TensorOP.add(linear.getOutput(), x, linear.getOutput());
+			Tensor_OP().add(linear.getOutput(), x, linear.getOutput());
 			norm.forward(linear.getOutput(), cache);
 		}else {
 			linear.forward(input);
-			TensorOP.add(linear.getOutput(), x, linear.getOutput());
+			Tensor_OP().add(linear.getOutput(), x, linear.getOutput());
 			norm.forward(linear.getOutput());
 		}
 		this.output = norm.getOutput();

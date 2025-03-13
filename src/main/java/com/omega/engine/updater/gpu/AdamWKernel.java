@@ -6,16 +6,18 @@ import java.util.Map;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.RandomUtils;
+import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAManager;
 import com.omega.engine.gpu.CUDAMemoryManager;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.loss.SoftmaxWithCrossEntropyLoss;
 import com.omega.engine.nn.network.BPNetwork;
 import com.omega.engine.nn.network.Network;
 
 import jcuda.Pointer;
 import jcuda.driver.CUfunction;
+import jcuda.driver.CUstream;
 
-public class AdamWKernel {
+public class AdamWKernel extends BaseKernel{
 	
 	public Tensor mw;
 	
@@ -45,14 +47,16 @@ public class AdamWKernel {
 	
 	private float weight_decay = 0.0f;
 	
-	public AdamWKernel(int weightLength,float weight_decay) {
+	public AdamWKernel(int weightLength,float weight_decay,CUDAManager cudaManager) {
+		super(cudaManager);
 		this.mw = new Tensor(1, 1, 1, weightLength, true);
 		this.vw = new Tensor(1, 1, 1, weightLength, true);
 		this.weight_decay = weight_decay;
 		init();
 	}
 	
-	public AdamWKernel(int weightLength,int biasLength,float weight_decay) {
+	public AdamWKernel(int weightLength,int biasLength,float weight_decay,CUDAManager cudaManager) {
+		super(cudaManager);
 		this.mw = new Tensor(1, 1, 1, weightLength, true);
 		this.vw = new Tensor(1, 1, 1, weightLength, true);
 		this.mb = new Tensor(1, 1, 1, biasLength, true);
@@ -61,7 +65,8 @@ public class AdamWKernel {
 		init();
 	}
 	
-	public AdamWKernel(int weightLength,int biasLength,float beta1,float beta2,float weight_decay) {
+	public AdamWKernel(int weightLength,int biasLength,float beta1,float beta2,float weight_decay,CUDAManager cudaManager) {
+		super(cudaManager);
 		this.mw = new Tensor(1, 1, 1, weightLength, true);
 		this.vw = new Tensor(1, 1, 1, weightLength, true);
 		this.mb = new Tensor(1, 1, 1, biasLength, true);
@@ -100,22 +105,22 @@ public class AdamWKernel {
 
 			if(function == null) {
 
-				function = CUDAModules.getLocalFunctionByModule("updater.cu", "adamw");
+				function = getCudaManager().getLocalFunctionByModule("updater.cu", "adamw");
 				
 			}
 			
 			if(r_function == null) {
-				r_function = CUDAModules.getLocalFunctionByModule("updater.cu", "adamwr");
+				r_function = getCudaManager().getLocalFunctionByModule("updater.cu", "adamwr");
 			}
 			
 			if(bn_function == null) {
 				
-				bn_function = CUDAModules.getLocalFunctionByModule("updater.cu", "adamw_bn");
+				bn_function = getCudaManager().getLocalFunctionByModule("updater.cu", "adamw_bn");
 				
 			}
 			
 			if(adamw_function == null) {
-				adamw_function = CUDAModules.getLocalFunctionByModule("updater.cu", "adamw_kernel");
+				adamw_function = getCudaManager().getLocalFunctionByModule("updater.cu", "adamw_kernel");
 			}
 			
 		} catch (Exception e) {
@@ -195,6 +200,44 @@ public class AdamWKernel {
 		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void updateW(Tensor diffW,Tensor weight,Network net,float lr,CUstream stream) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         * float* weight, const float* diffW, float* mw, float* vw, int n,
+               float learnRate, float beta1, float beta2, float beta1_correction, float beta2_correction, float eps, float weight_decay
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(weight.getGpuData()),
+					Pointer.to(diffW.getGpuData()),
+	                Pointer.to(mw.getGpuData()),
+	                Pointer.to(vw.getGpuData()),
+	                Pointer.to(new int[]{diffW.dataLength}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{beta1}),
+	                Pointer.to(new float[]{beta2}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta1, net.train_time))}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta2, net.train_time))}),
+	                Pointer.to(new float[]{1e-8f}),
+	                Pointer.to(new float[]{weight_decay})
+	            );
+			
+			cuLaunchKernel(adamw_function,
+		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, stream,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        );
 
@@ -325,6 +368,44 @@ public class AdamWKernel {
 		
 	}
 	
+	public void updateGamma(Tensor diffW,Tensor weight,Network net,float lr,CUstream stream) {
+		
+		try {
+			
+			/**
+	         * 设置入参
+	         * float* weight, const float* diffW, float* mw, float* vw, int n,
+               float learnRate, float beta1, float beta2, float beta1_correction, float beta2_correction, float eps, float weight_decay
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(weight.getGpuData()),
+					Pointer.to(diffW.getGpuData()),
+	                Pointer.to(mw.getGpuData()),
+	                Pointer.to(vw.getGpuData()),
+	                Pointer.to(new int[]{diffW.dataLength}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{beta1}),
+	                Pointer.to(new float[]{beta2}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta1, net.train_time))}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta2, net.train_time))}),
+	                Pointer.to(new float[]{1e-8f}),
+	                Pointer.to(new float[]{weight_decay})
+	            );
+			
+			cuLaunchKernel(adamw_function,
+		            this.CAFFE_GET_BLOCKS(diffW.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, stream,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 //	public void updateB(Tensor diffB,Tensor bias,Network net,float lr) {
 //		
 //		try {
@@ -391,6 +472,44 @@ public class AdamWKernel {
 		            this.CAFFE_GET_BLOCKS(diffB.dataLength),  1, 1,      // Grid dimension
 		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 		            0, null,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void updateB(Tensor diffB,Tensor bias,Network net,float lr, CUstream stream) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         * float* weight, const float* diffW, float* mw, float* vw, int n,
+               float learnRate, float beta1, float beta2, float beta1_correction, float beta2_correction, float eps, float weight_decay
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(bias.getGpuData()),
+					Pointer.to(diffB.getGpuData()),
+	                Pointer.to(mb.getGpuData()),
+	                Pointer.to(vb.getGpuData()),
+	                Pointer.to(new int[]{diffB.dataLength}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{beta1}),
+	                Pointer.to(new float[]{beta2}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta1, net.train_time))}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta2, net.train_time))}),
+	                Pointer.to(new float[]{1e-8f}),
+	                Pointer.to(new float[]{weight_decay})
+	            );
+			
+			cuLaunchKernel(adamw_function,
+		            this.CAFFE_GET_BLOCKS(diffB.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, stream,               // Shared memory size and stream
 		            kernelParameters, null // Kernel- and extra parameters
 		        );
 
@@ -477,6 +596,44 @@ public class AdamWKernel {
 		
 	}
 	
+	public void updateBeta(Tensor diffB,Tensor bias,Network net,float lr,CUstream stream) {
+		
+		try {
+
+	        /**
+	         * 设置入参
+	         * float* weight, const float* diffW, float* mw, float* vw, int n,
+               float learnRate, float beta1, float beta2, float beta1_correction, float beta2_correction, float eps, float weight_decay
+	         */ 
+			kernelParameters = Pointer.to(
+					Pointer.to(bias.getGpuData()),
+					Pointer.to(diffB.getGpuData()),
+	                Pointer.to(mb.getGpuData()),
+	                Pointer.to(vb.getGpuData()),
+	                Pointer.to(new int[]{diffB.dataLength}),
+	                Pointer.to(new float[]{lr}),
+	                Pointer.to(new float[]{beta1}),
+	                Pointer.to(new float[]{beta2}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta1, net.train_time))}),
+	                Pointer.to(new float[]{(float) (1.0f - Math.pow(beta2, net.train_time))}),
+	                Pointer.to(new float[]{1e-8f}),
+	                Pointer.to(new float[]{weight_decay})
+	            );
+			
+			cuLaunchKernel(adamw_function,
+		            this.CAFFE_GET_BLOCKS(diffB.dataLength),  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, stream,               // Shared memory size and stream
+		            kernelParameters, null // Kernel- and extra parameters
+		        );
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
 //	public void updateBeta(Tensor diffB,Tensor bias,Network net,float lr) {
 //		
 //		try {
@@ -517,6 +674,7 @@ public class AdamWKernel {
 	
 
 	public static void main(String args[]){	
+			CUDAManager cudaManager = new CUDAManager(0);
 	    	int N = 2;
 	    	int C = 1;
 	    	int H = 1;
@@ -535,7 +693,7 @@ public class AdamWKernel {
 	    	BPNetwork net = new BPNetwork(new SoftmaxWithCrossEntropyLoss());
 	    	net.train_time = 1;
 	    	net.number = N;
-	    	AdamWKernel k = new AdamWKernel(bias1.length, 0.001f);
+	    	AdamWKernel k = new AdamWKernel(bias1.length, 0.001f, cudaManager);
 
 	    	k.updateGamma(delta, w, net, 0.0001f);
 	    	delta.showDM();

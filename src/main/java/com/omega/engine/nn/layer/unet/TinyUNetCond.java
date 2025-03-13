@@ -7,18 +7,13 @@ import java.util.Stack;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
-import com.omega.engine.ad.op.TensorOP;
-import com.omega.engine.gpu.BaseKernel;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.ConvolutionLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
 import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.RouteLayer;
 import com.omega.engine.nn.layer.active.SiLULayer;
-import com.omega.engine.nn.layer.diffusion.TimeEmbeddingLayer;
 import com.omega.engine.nn.layer.diffusion.TinyTimeEmbeddingLayer;
-import com.omega.engine.nn.layer.normalization.GNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.RunModel;
 import com.omega.engine.nn.network.Transformer;
@@ -26,8 +21,6 @@ import com.omega.engine.updater.UpdaterFactory;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.transformer.utils.LagJsonReader;
-
-import jcuda.runtime.JCuda;
 
 /**
  * UNet_Cond
@@ -88,8 +81,6 @@ public class TinyUNetCond extends Layer{
 	private SiLULayer act;
 	private ConvolutionLayer conv_out2;
 	
-	private BaseKernel baseKernel;
-	
 	private Tensor tDiff;
 	
 	public TinyUNetCond(int channel,int height,int width,int[] downChannels,int[] midChannels,int timeSteps,
@@ -113,13 +104,13 @@ public class TinyUNetCond extends Layer{
 	public void initLayers() {
 		
 		conv_in1 = new ConvolutionLayer(channel, downChannels[0], width, height, 3, 3, 1, 1, true, network);
-		conv_in1.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		conv_in1.setUpdater(UpdaterFactory.create(this.network));
 		conv_in1.paramsInit = ParamsInit.silu;
 		
 		in_act = new SiLULayer(conv_in1);
 		
 		conv_in2 = new ConvolutionLayer(downChannels[0], downChannels[0], width, height, 3, 3, 1, 1, true, network);
-		conv_in2.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		conv_in2.setUpdater(UpdaterFactory.create(this.network));
 		conv_in2.paramsInit = ParamsInit.silu;
 		
 		t_embd = new TinyTimeEmbeddingLayer(timeSteps, tEmbDim, true, network);
@@ -177,18 +168,14 @@ public class TinyUNetCond extends Layer{
 		resnet = new UNetResnetBlockLayer2(downChannels[0] * 2, downChannels[0], ih, iw, tEmbDim, groups, network);
 		
 		conv_out1 = new ConvolutionLayer(downChannels[0], downChannels[0], iw, ih, 3, 3, 1, 1, true, this.network);
-		conv_out1.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		conv_out1.setUpdater(UpdaterFactory.create(this.network));
 		conv_out1.paramsInit = ParamsInit.silu;
 		
 		act = new SiLULayer(conv_out1);
 		
 		conv_out2 = new ConvolutionLayer(downChannels[0], channel, width, height, 3, 3, 1, 1, true, this.network);
-		conv_out2.setUpdater(UpdaterFactory.create(this.network.updater, this.network.updaterParams));
+		conv_out2.setUpdater(UpdaterFactory.create(this.network));
 		conv_out2.paramsInit = ParamsInit.silu;
-		
-		if(baseKernel == null) {
-			baseKernel = new BaseKernel();
-		}
 		
 		this.oHeight = ih;
 		this.oWidth = iw;

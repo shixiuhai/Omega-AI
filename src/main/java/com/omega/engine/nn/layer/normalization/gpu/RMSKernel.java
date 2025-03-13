@@ -7,8 +7,8 @@ import com.omega.common.utils.JsonUtils;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.BaseKernel;
+import com.omega.engine.gpu.CUDAManager;
 import com.omega.engine.gpu.CUDAMemoryManager;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.layer.normalization.BNType;
 import com.omega.engine.nn.layer.normalization.RMSLayer;
 import com.omega.engine.nn.network.Transformer;
@@ -45,12 +45,16 @@ public class RMSKernel extends BaseKernel{
 	
 	private CUfunction forward_function2;
 	
+	private CUfunction forward_function3;
+	
 	/**
 	 * 反向传播方法
 	 */
 	private CUfunction backward_function;
 	
 	private CUfunction backward_function2;
+	
+	private CUfunction backward_function3;
 	
 	
 	private int CAFFE_CUDA_NUM_THREADS = 512;
@@ -64,7 +68,8 @@ public class RMSKernel extends BaseKernel{
 	private CUdeviceptr d_mean;
 	private CUdeviceptr d_rms;
 	
-	public RMSKernel(int W,BNType bnType) {
+	public RMSKernel(int W,BNType bnType,CUDAManager cudaManager) {
+		super(cudaManager);
 		this.W = W;
 		this.bnType = bnType;
 		init();
@@ -90,19 +95,27 @@ public class RMSKernel extends BaseKernel{
 		try {
 			
 			if(forward_function == null) {
-				forward_function = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_forward_kernel");
+				forward_function = getCudaManager().getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_forward_kernel");
 			}
 
 			if(backward_function == null) {
-				backward_function = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel");
+				backward_function = getCudaManager().getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel");
 			}
 			
 			if(forward_function2 == null) {
-				forward_function2 = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_forward_kernel1");
+				forward_function2 = getCudaManager().getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_forward_kernel1");
 			}
 
 			if(backward_function2 == null) {
-				backward_function2 = CUDAModules.getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel1");
+				backward_function2 = getCudaManager().getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel1");
+			}
+			
+			if(forward_function3 == null) {
+				forward_function3 = getCudaManager().getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_forward_kernel2");
+			}
+			
+			if(backward_function3 == null) {
+				backward_function3 = getCudaManager().getLocalFunctionByModule("RMSKernel.cu", "rmsnorm_backward_kernel2");
 			}
 
 		} catch (Exception e) {
@@ -189,13 +202,7 @@ public class RMSKernel extends BaseKernel{
 		
 		try {
 			
-			boolean check = checkBatch(input);
-
-			if(!check) {
-
-				initKernel();
-				
-			}
+			checkBatch(input);
 
 			/**
 			 * float *out, const float *inp, const float *weight, int N, int C
@@ -211,6 +218,40 @@ public class RMSKernel extends BaseKernel{
 			int grid_size = CAFFE_GET_BLOCKS(B);
 			
 			checkCUDA(cuLaunchKernel(forward_function2,
+					grid_size, 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					forwardParameters, null // Kernel- and extra parameters
+				));
+			
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void forward3(Tensor gamma, Tensor input, Tensor output) {
+		
+		try {
+			
+			checkBatch(input);
+			
+			/**
+			 * float *__restrict__ out, const float *__restrict__ inp,const float *__restrict__ weight, int N, int C
+			 */
+			forwardParameters = Pointer.to(
+					Pointer.to(output.getGpuData()),
+					Pointer.to(input.getGpuData()),
+					Pointer.to(gamma.getGpuData()),
+					Pointer.to(new int[] {B}),
+					Pointer.to(new int[] {W})
+	            );
+			
+			int grid_size = (int) Math.ceil((float)(B * 32 + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS);
+			
+			checkCUDA(cuLaunchKernel(forward_function3,
 					grid_size, 1, 1,      // Grid dimension
 					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
 					0, null,               // Shared memory size and stream
@@ -297,6 +338,39 @@ public class RMSKernel extends BaseKernel{
 		
 	}
 	
+	public void backward3(Tensor input,Tensor delta,Tensor diff,Tensor gamma,Tensor dgamma) {
+		try {
+			dgamma.clearGPU();
+			/**
+			 * float *__restrict__ dinp, float *__restrict__ dweight,
+               const float *__restrict__ dout, const float *__restrict__ inp, const float *__restrict__ weight,
+               int N, int C
+			 */
+			backwardParameters = Pointer.to(
+					Pointer.to(diff.getGpuData()),
+					Pointer.to(dgamma.getGpuData()),
+					Pointer.to(delta.getGpuData()),
+					Pointer.to(input.getGpuData()),
+					Pointer.to(gamma.getGpuData()),
+					Pointer.to(new int[] {B}),
+					Pointer.to(new int[] {W})
+	            );
+			
+			int grid_size = (int) Math.ceil((float)(B * 32 + CAFFE_CUDA_NUM_THREADS - 1) / CAFFE_CUDA_NUM_THREADS);
+//			System.out.println(grid_size);
+//			int grid_size = CAFFE_GET_BLOCKS(B);
+			checkCUDA(cuLaunchKernel(backward_function3,
+					grid_size, 1, 1,      // Grid dimension
+					CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+					0, null,               // Shared memory size and stream
+					backwardParameters, null // Kernel- and extra parameters
+				));
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+	}
+	
 	public void checkCUDA(int code) {
 		if(code != cudaError.cudaSuccess) {
 			System.err.println("Error code "+code+":"+cudaError.stringFor(code));
@@ -313,8 +387,6 @@ public class RMSKernel extends BaseKernel{
     	
     	 try {
 
-			CUDAModules.initContext();
-			
 			int N = 4;
 	    	int T = 512;
 	    	int W = 512;
