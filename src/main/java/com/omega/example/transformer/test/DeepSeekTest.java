@@ -20,7 +20,6 @@ import com.omega.engine.parallel.params.Llama3Parameters;
 import com.omega.engine.updater.UpdaterType;
 import com.omega.example.transformer.dataset.PreTrainDataset2;
 import com.omega.example.transformer.dataset.SFTBinDataset;
-import com.omega.example.transformer.dataset.SFTDataset2;
 import com.omega.example.transformer.dataset.parallel.ParallelDataLoader;
 import com.omega.example.transformer.dataset.parallel.ThreadDataset;
 import com.omega.example.transformer.utils.ModelUtils;
