@@ -146,45 +146,6 @@ public class DeepSeekTest {
 		
 	}
 	
-	public static void train_full_sft() {
-		try {
-			boolean bias = false;
-			boolean dropout = false;
-			boolean flashAttention = false;
-			int batchSize = 32;
-			int max_len = 512;
-			int embedDim = 768;
-			int head_num = 8;
-			int nKVHeadNum = 2;
-			int decoderNum = 8;
-
-			String trainPath = "/omega/dataset/sft_512.jsonl";
-			String vocabPath = "/omega/models/6400_tokenizer/vocab.json";
-			String mergesPath = "/omega/models/6400_tokenizer/merges.txt";
-			
-			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
-			
-			SFTDataset2 trainData = new SFTDataset2(trainPath, max_len, batchSize, tokenizer);
-
-			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
-			network.learnRate = 5e-5f;
-			network.CLIP_GRAD_NORM = true;
-			
-			String base_model_path = "/omega/models/llama3-26-base-zh.model";
-			ModelUtils.loadModel(network, base_model_path);
-			
-			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 2, 0.0001f, LearnRateUpdate.CONSTANT, false);
-			optimizer.trainLlama3_chinese(trainData, 8, true, "/omega/models/llama3-26-full-sft-zh");
-
-			String save_model_path = "/omega/models/llama3-26-full-sft-zh.model";
-			ModelUtils.saveModel(network, save_model_path);
-
-		} catch (Exception e) {
-			// TODO: handle exception
-			e.printStackTrace();
-		}
-	}
-	
 	public static void testBinData() {
 		try {
 			
