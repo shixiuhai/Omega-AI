@@ -19,6 +19,8 @@ import com.omega.engine.updater.UpdaterFactory;
  */
 public class CBLLayer extends Layer{
 
+	private boolean bias = false;
+	
 	private int kHeight = 3;
 	
 	private int kWidth = 3;
@@ -51,9 +53,10 @@ public class CBLLayer extends Layer{
 		initLayers();
 	}
 	
-	public CBLLayer(int channel,int oChannel,int height,int width,int kHeight,int kWidth,int stride,int padding, String activeType, Network network) {
+	public CBLLayer(int channel,int oChannel,int height,int width,int kHeight,int kWidth,int stride,int padding,boolean bias, String activeType, Network network) {
 		this.network = network;
 		this.activeType = ActiveType.valueOf(activeType);
+		this.bias = bias;
 		this.channel = channel;
 		this.oChannel = oChannel;
 		this.height = height;
@@ -69,7 +72,7 @@ public class CBLLayer extends Layer{
 
 	public void initLayers() {
 		
-		convLayer = new ConvolutionLayer(channel, oChannel, width, height, kHeight, kWidth, padding, stride, false, this.network, activeType);
+		convLayer = new ConvolutionLayer(channel, oChannel, width, height, kHeight, kWidth, padding, stride, bias, this.network, activeType);
 		convLayer.setUpdater(UpdaterFactory.create(this.network));
 		
 		bnLayer = new BNLayer(convLayer);

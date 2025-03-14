@@ -1496,7 +1496,7 @@ public class MBSGDOptimizer extends Optimizer {
 
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 			
 			OutputsNetwork network = (OutputsNetwork) this.network;
 			

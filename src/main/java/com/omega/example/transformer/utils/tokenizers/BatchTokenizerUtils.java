@@ -94,7 +94,7 @@ public class BatchTokenizerUtils {
 			
 			BPETokenizer3 bpe = new BPETokenizer3(vocabPath, mergesPath);
 
-			int batchSize = 10000;
+			int batchSize = 100000;
 			
 			List<String> txtList = new ArrayList<String>();
 			String[] ids = new String[batchSize];
@@ -107,9 +107,15 @@ public class BatchTokenizerUtils {
 		    	List txts = once.get("conversations");
 				StringBuilder sb = new StringBuilder();
 				sb.append("<s>system\n您好，我是人工智能机器人，请问有什么可以帮助您？</s>\n");
+				String role = "user";
 				for(int j = 0;j<txts.size();j++) {
+					if(j % 2 == 0) {
+						role = "user";
+					}else {
+						role = "assistant";
+					}
 					Map<String,String> onceObj = (Map<String, String>) txts.get(j);
-					String txt = "<s>" + once.get("role") + "\n" + onceObj.get("content") + "</s>\n";
+					String txt = "<s>" + role + "\n" + onceObj.get("content") + "</s>\n";
 					sb.append(txt);
 				}
 				String txt =  sb.toString();
@@ -121,9 +127,13 @@ public class BatchTokenizerUtils {
 			    	}
 			    	
 			    	if(i > 1 && i % batchSize == 0) {
+			    		long startEncode = System.nanoTime();
 			    		EncodeExMaxLen.encode(txtList, ids, bpe, maxLen);
+			    		System.out.println("encode cost:"+(System.nanoTime() - startEncode)/1e6+"ms.");
+			    		long wirite = System.nanoTime();
 			    		writeIn(txtList, ids, writer);
 			    		txtList.clear();
+			    		System.out.println("wirite cost:"+(System.nanoTime() - wirite)/1e6+"ms.");
 			    	}
 
 	    			System.out.println(i);
@@ -758,10 +768,10 @@ public class BatchTokenizerUtils {
 //		
 //		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, 512);
 		
-//		String txtPath = "H:\\transformer_dataset\\sft_512_6400.txt";
-//		String outputPath = "H:\\transformer_dataset\\sft_512_6400.bin";
-//		
-//		txt2bin(txtPath, outputPath, BinDataType.unint16);
+		String txtPath = "H:\\transformer_dataset\\sft_512_6400.txt";
+		String outputPath = "H:\\transformer_dataset\\sft_512_6400.bin";
+		
+		txt2bin(txtPath, outputPath, BinDataType.unint16);
 			
 //		String dataPath = "H:\\transformer_dataset\\pretrain_hq.jsonl";
 //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
@@ -770,10 +780,10 @@ public class BatchTokenizerUtils {
 //		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
 //		encodeDeepSeekDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, 512);
 		
-		String txtPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
-		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.bin";
-		
-		txt2bin(txtPath, outputPath, BinDataType.unint16);
+//		String txtPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
+//		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.bin";
+//		
+//		txt2bin(txtPath, outputPath, BinDataType.unint16);
 
 	}
 	

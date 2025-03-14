@@ -61,7 +61,7 @@ public class DarknetLoader {
 						index++;
 						break;
 					case cbl:
-						loadCBLvWeights(file, l, layer, net.layerList, freeze);
+						loadCBLWeights(file, l, layer, net.layerList, freeze);
 						index++;
 						break;
 					case full:
@@ -166,7 +166,7 @@ public class DarknetLoader {
 		layer.freeze = freeze;
 	}
 	
-	public static void loadCBLvWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList,boolean freeze) throws IOException {
+	public static void loadCBLWeights(RandomAccessFile inputStream,int index,Layer layer,List<Layer> layerList,boolean freeze) throws IOException {
 		
 		CBLLayer cbl = (CBLLayer) layer;
 		

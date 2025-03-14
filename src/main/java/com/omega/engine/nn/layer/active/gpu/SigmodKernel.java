@@ -7,7 +7,6 @@ import com.omega.common.utils.MatrixUtils;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAManager;
 import com.omega.engine.gpu.CUDAMemoryManager;
-import com.omega.engine.gpu.CUDAModules;
 
 import jcuda.Pointer;
 import jcuda.Sizeof;
@@ -46,19 +45,19 @@ public class SigmodKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "sigmod_forward");
+				function = getCudaManager().getLocalFunctionByModule("activeFunction.cu", "sigmod_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-				function_back = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "sigmod_backward");
+				function_back = getCudaManager().getLocalFunctionByModule("activeFunction.cu", "sigmod_backward");
 				
 			}
 			
 			if(function_back_temp == null) {
 
-				function_back_temp = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "sigmod_backward_temp");
+				function_back_temp = getCudaManager().getLocalFunctionByModule("activeFunction.cu", "sigmod_backward_temp");
 				
 			}
 			

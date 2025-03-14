@@ -49,19 +49,19 @@ public class LeakyReluKernel extends BaseKernel{
 
 			if(function == null) {
 
-				function = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "leakyRelu_forward");
+				function = getCudaManager().getLocalFunctionByModule("activeFunction.cu", "leakyRelu_forward");
 				
 			}
 			
 			if(function_back == null) {
 
-				function_back = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "leakyRelu_backward");
+				function_back = getCudaManager().getLocalFunctionByModule("activeFunction.cu", "leakyRelu_backward");
 				
 			}
 			
 			if(function_back_temp == null) {
 
-				function_back_temp = CUDAModules.getLocalFunctionByModule("activeFunction.cu", "leakyRelu_backward_temp");
+				function_back_temp = getCudaManager().getLocalFunctionByModule("activeFunction.cu", "leakyRelu_backward_temp");
 				
 			}
 			

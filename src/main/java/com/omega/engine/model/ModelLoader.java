@@ -278,7 +278,7 @@ public class ModelLoader {
 			}
 		}
 		
-		CBLLayer cbl = new CBLLayer(pre.oChannel, kernel, pre.oHeight, pre.oWidth, size, size, stride, pad, activation, nn);
+		CBLLayer cbl = new CBLLayer(pre.oChannel, kernel, pre.oHeight, pre.oWidth, size, size, stride, pad, true, activation, nn);
 		nn.addLayer(cbl);
 		cfg.put("lastIndex", cbl.index);
 		
