@@ -27,7 +27,7 @@ import com.omega.example.transformer.utils.bpe.BPETokenizer3;
 import com.omega.example.transformer.utils.bpe.BinDataType;
 
 public class DeepSeekTest {
-	
+
 	public static void train_pretrain() {
 		try {
 			boolean bias = false;
@@ -43,25 +43,25 @@ public class DeepSeekTest {
 			String trainPath = "H:\\H:\\transformer_dataset\\pretrain_hq.jsonl";
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
-			
+
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
-			
+
 			PreTrainDataset2 trainData = new PreTrainDataset2(trainPath, max_len, batchSize, tokenizer);
 
 			Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, head_num, nKVHeadNum, decoderNum, trainData.vocab_size, max_len, embedDim, bias, dropout, flashAttention);
-			
+
 			network.learnRate = 5e-4f;
 			network.CLIP_GRAD_NORM = true;
-			
+
 			EDOptimizer optimizer = new EDOptimizer(network, batchSize, 4, 0.0001f, LearnRateUpdate.CONSTANT, false);
 			optimizer.trainLlama3_chinese(trainData, 8, true, "/omega/models/llama3-26-base-zh");
 
 			String save_model_path = "/omega/models/llama3-26-base-zh.model";
 			ModelUtils.saveModel(network, save_model_path);
-			
+
 			network.RUN_MODEL = RunModel.TEST;
 			Scanner scanner = new Scanner(System.in);
-			
+
 			while (true) {
 				System.out.println("请输入中文:");
 				String input_txt = scanner.nextLine();
@@ -94,132 +94,132 @@ public class DeepSeekTest {
 				System.out.println("chatbot:"+tokenizer.decode(idx));
 			}
 			scanner.close();
-			
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
 	}
-	
+
 	public static void dp_train_pretrain() {
-		
+
 		try {
-			
+
 			int[] deviceIds = new int[] {0, 1, 2, 3};
 
 			NetworkType networkType = NetworkType.LLAMA3;
 
 			int max_len = 512;
-			int embedDim = 768;
+			int embedDim = 512;
 			int headNum = 8;
 			int nKVHeadNum = 2;
-			int decoderNum = 8;
+			int decoderNum = 16;
 			int vocabSize = 6400;
-			
-			int batchSize = 24;
+
+			int batchSize = 16;
 			float lr = 5e-4f;
 
 			String trainPath = "/omega/dataset/pretrain_hq_6400.bin";
 			String vocabPath = "/omega/models/vocab.json";
 			String mergesPath = "/omega/models/merges.txt";
-			
+
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
-			
+
 			SFTBinDataset trainData = new SFTBinDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
-			
+
 			ParallelDataLoader pdl = new ParallelDataLoader(trainData, deviceIds);
-			
+
 			Llama3Parameters parameters = new Llama3Parameters(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, headNum, nKVHeadNum, decoderNum, vocabSize, max_len, embedDim, false, false, false, lr);
-			
+
 			DP dp = new DP(deviceIds, 0, networkType, parameters, pdl, 2);
-			
+
 			dp.train();
-			
+
 			String save_model_path = "/omega/models/llama3-26-base-zh.model";
 			ModelUtils.saveModel((Llama3)dp.getMaster(), save_model_path);
-			
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
-		
+
 	}
-	
+
 	public static void testBinData() {
 		try {
-			
+
 			int batchSize = 32;
 			int max_len = 512;
 
 			String trainPath = "H:\\transformer_dataset\\sft_512_6400.bin";
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
-			
+
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
-			
+
 			SFTBinDataset trainData = new SFTBinDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
-			
+
 			int[] rankIds = new int[] {0, 1, 2};
-			
+
 			ParallelDataLoader pdl = new ParallelDataLoader(trainData, rankIds);
-			
+
 			ExecutorService executorService = Executors.newFixedThreadPool(rankIds.length);
 
 			for(int rankId:rankIds) {
-				
+
 				ThreadDataset td = pdl.getDataloaders().get(rankId);
 				Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
-				
+
 				float[] tmpInput = new float[batchSize * max_len];
 
 				Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
-				
+
 				float[] tmpLabel = new float[batchSize * max_len];
-				
+
 				int[] padCount = new int[] {0};
 				executorService.execute(new Runnable() {
-					
+
 					@Override
 					public void run() {
 						// TODO Auto-generated method stub
-						
+
 						try {
 
 							td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
-							
+
 							for(int i = 0;i<100;i++) {
 								td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
 							}
 
 //							System.out.println(JsonUtils.toJson(tmpInput));
-//							
+//
 //							input.showDM();
 
 						} catch (Exception e) {
 							// TODO: handle exception
 							e.printStackTrace();
 						}
-						
+
 					}
 				});
-				
+
 			}
 
 			executorService.shutdown();
-			
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
 		}
 	}
-	
+
 	public static int output2NextIDX(Tensor output,int nextTokenIdx) {
 		if(nextTokenIdx < output.number) {
 			return pickTopN(output.getByNumber(nextTokenIdx), 1);
 		}
 		return 0;
 	}
-	
+
 //	public static int output2NextIDXTopN(Tensor output,int nextTokenIdx,int topK) {
 //		SoftmaxKernel kernel = new SoftmaxKernel();
 //		Tensor tmp = new Tensor(1, 1, 1, output.width, true);
@@ -231,40 +231,40 @@ public class DeepSeekTest {
 //		}
 //		return 0;
 //	}
-	
+
 	public static int pickTopN(float[] x,int n) {
 
 		float[] sort = Arrays.copyOf(x, x.length);
-		
+
 		Arrays.sort(sort);
-		
+
 		float[] topN = Arrays.copyOfRange(sort, sort.length - n, sort.length);
-		
+
 		float v = topN[RandomUtils.getRandomNumber(topN)];
-		
+
 		for(int i = 0;i<x.length;i++) {
 			if(v == x[i]) {
 				return i;
 			}
 		}
-		
+
 		return 0;
 	}
-	
+
 	public static void main(String[] args) {
-		
+
 		try {
 
 //			CUDAModules.initContext();
 
 //			train_pretrain();
-			
+
 //			train_full_sft();
-			
+
 //			testBinData();
-			
+
 			dp_train_pretrain();
-			
+
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -273,5 +273,5 @@ public class DeepSeekTest {
 			CUDAMemoryManager.free();
 		}
 	}
-	
+
 }
