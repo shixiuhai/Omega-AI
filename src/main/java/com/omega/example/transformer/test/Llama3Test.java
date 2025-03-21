@@ -116,9 +116,9 @@ public class Llama3Test {
 			int nKVHeadNum = 8;
 			int decoderNum = 8;
 			
-//			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
+			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
 			
-			String trainPath = "H:\\model\\pretrain_data_6400.bin";
+//			String trainPath = "H:\\model\\pretrain_data_6400.bin";
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
 			

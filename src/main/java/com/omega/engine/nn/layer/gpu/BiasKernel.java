@@ -234,23 +234,20 @@ public class BiasKernel extends BaseKernel{
 			
 			diffB.clearGPU();
 
-//			if(backConvKernelParameters == null || delta.number != this.N) {
+	        /**
+	         * 设置入参
+	         * float *bias_updates, float *delta, int batch, int n, int size
+	         */ 
+			backConvKernelParameters = Pointer.to(
+	        		Pointer.to(diffB.getGpuData()),
+	                Pointer.to(delta.getGpuData()),
+	                Pointer.to(new int[]{delta.getNumber()}),
+	                Pointer.to(new int[]{delta.getChannel()}),
+	                Pointer.to(new int[]{delta.height * delta.width})
+	            );
+			
+			this.N = delta.number;
 
-		        /**
-		         * 设置入参
-		         * float *bias_updates, float *delta, int batch, int n, int size
-		         */ 
-				backConvKernelParameters = Pointer.to(
-		        		Pointer.to(diffB.getGpuData()),
-		                Pointer.to(delta.getGpuData()),
-		                Pointer.to(new int[]{delta.getNumber()}),
-		                Pointer.to(new int[]{delta.getChannel()}),
-		                Pointer.to(new int[]{delta.height * delta.width})
-		            );
-				
-				this.N = delta.number;
-		        
-//			}
 			
 			cuLaunchKernel(back_conv_function,
 					delta.getChannel(),  1, 1,      // Grid dimension
@@ -260,6 +257,40 @@ public class BiasKernel extends BaseKernel{
 		        );
 
 //	        JCudaDriver.cuCtxSynchronize();
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public void backwardConv3DBias(int depth,Tensor diffB,Tensor delta) {
+		
+		try {
+			
+			diffB.clearGPU();
+
+	        /**
+	         * 设置入参
+	         * float *bias_updates, float *delta, int batch, int n, int size
+	         */ 
+			backConvKernelParameters = Pointer.to(
+	        		Pointer.to(diffB.getGpuData()),
+	                Pointer.to(delta.getGpuData()),
+	                Pointer.to(new int[]{delta.getNumber()}),
+	                Pointer.to(new int[]{delta.getChannel() / depth}),
+	                Pointer.to(new int[]{depth * delta.height * delta.width})
+	            );
+			
+			this.N = delta.number;
+
+			cuLaunchKernel(back_conv_function,
+					delta.getChannel() / depth,  1, 1,      // Grid dimension
+		            CAFFE_CUDA_NUM_THREADS, 1, 1,      // Block dimension
+		            0, null,               // Shared memory size and stream
+		            backConvKernelParameters, null // Kernel- and extra parameters
+		        );
 
 		} catch (Exception e) {
 			// TODO: handle exception

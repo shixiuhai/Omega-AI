@@ -34,6 +34,8 @@ public class DP {
 	
 	private Map<Integer,NetworkRunnable> threads = new HashMap<Integer, NetworkRunnable>();
 	
+	private String pretrainModelPath;
+	
 	public DP(int[] deviceIds,NetworkType networkType,Parameters parameters,ParallelDataLoader pd,int trainTime) {
 		this.pd = pd;
 		this.deviceIds = deviceIds;
@@ -67,6 +69,10 @@ public class DP {
 		}else {
 			return threads.get(deviceIds[deviceIds.length - 1]);
 		}
+	}
+	
+	public void load(String pretrainModelPath) {
+		this.pretrainModelPath = pretrainModelPath;
 	}
 	
 	public void train() {
@@ -148,6 +154,10 @@ public class DP {
 	
 	public Network getMaster() {
 		return threads.get(masterRank).getNetwork();
+	}
+
+	public String getPretrainModelPath() {
+		return pretrainModelPath;
 	}
 	
 }

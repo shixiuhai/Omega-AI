@@ -8,8 +8,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,8 +18,6 @@ import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.example.transformer.utils.SentencePieceTokenizer;
 import com.omega.example.transformer.utils.bpe.BPETokenizer3;
 import com.omega.example.transformer.utils.bpe.BinDataType;
-
-import jcuda.Sizeof;
 
 
 public class BatchTokenizerUtils {
@@ -101,39 +97,39 @@ public class BatchTokenizerUtils {
 			
 			int i = 1;
 			while ((line = bufferedReader.readLine()) != null) {
-		    	once = JsonUtils.gson.fromJson(line, HashMap.class);
-//		    	System.err.println(line);
-
-		    	List txts = once.get("conversations");
-				StringBuilder sb = new StringBuilder();
-				sb.append("<s>system\n您好，我是人工智能机器人，请问有什么可以帮助您？</s>\n");
-				String role = "user";
-				for(int j = 0;j<txts.size();j++) {
-					if(j % 2 == 0) {
-						role = "user";
-					}else {
-						role = "assistant";
+				String txt = null;
+				try {
+					once = JsonUtils.gson.fromJson(line, HashMap.class);
+			    	List txts = once.get("conversations");
+					StringBuilder sb = new StringBuilder();
+					sb.append("<s>system\n您好，我是人工智能机器人，请问有什么可以帮助您？</s>\n");
+					String role = "user";
+					for(int j = 0;j<txts.size();j++) {
+						if(j % 2 == 0) {
+							role = "user";
+						}else {
+							role = "assistant";
+						}
+						Map<String,String> onceObj = (Map<String, String>) txts.get(j);
+						txt = "<s>" + role + "\n" + onceObj.get("content") + "</s>\n";
+						sb.append(txt);
 					}
-					Map<String,String> onceObj = (Map<String, String>) txts.get(j);
-					String txt = "<s>" + role + "\n" + onceObj.get("content") + "</s>\n";
-					sb.append(txt);
+					txt =  sb.toString();
+				} catch (Exception e) {
+					// TODO: handle exception
+					e.printStackTrace();
 				}
-				String txt =  sb.toString();
-		    	
-		    	if(txt.length() <= 512) {
+
+		    	if(txt != null && txt.length() <= 512) {
 
 			    	if(txt != null && !txt.equals("")) {
 			    		txtList.add(txt);
 			    	}
 			    	
 			    	if(i > 1 && i % batchSize == 0) {
-			    		long startEncode = System.nanoTime();
 			    		EncodeExMaxLen.encode(txtList, ids, bpe, maxLen);
-			    		System.out.println("encode cost:"+(System.nanoTime() - startEncode)/1e6+"ms.");
-			    		long wirite = System.nanoTime();
 			    		writeIn(txtList, ids, writer);
 			    		txtList.clear();
-			    		System.out.println("wirite cost:"+(System.nanoTime() - wirite)/1e6+"ms.");
 			    	}
 
 	    			System.out.println(i);
@@ -414,7 +410,7 @@ public class BatchTokenizerUtils {
 	
 	public static void writeShort(List<String> txtList, FileOutputStream writer) throws IOException {
 		System.out.println("writing.");
-		byte[] batch = new byte[1024];
+		byte[] batch = new byte[4096];
 		for(int i = 0;i<txtList.size();i++) {
 			String txt = txtList.get(i);
 			String[] idList = txt.split(" ");
@@ -759,17 +755,19 @@ public class BatchTokenizerUtils {
 //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.bin";
 //		
 //		txt2bin(txtPath, outputPath, 1, 2);
-
-//		String dataPath = "I:\\dataset\\sft_512.jsonl";
-//		String outputPath = "H:\\transformer_dataset\\sft_512_6400.txt";
+		
+		int maxLen = 2048;
+		
+//		String dataPath = "D:\\chroms_download\\sft_"+maxLen+".jsonl";
+//		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.txt";
 //		
 //		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 //		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
 //		
-//		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, 512);
+//		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
 		
-		String txtPath = "H:\\transformer_dataset\\sft_512_6400.txt";
-		String outputPath = "H:\\transformer_dataset\\sft_512_6400.bin";
+		String txtPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.txt";
+		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.bin";
 		
 		txt2bin(txtPath, outputPath, BinDataType.unint16);
 			

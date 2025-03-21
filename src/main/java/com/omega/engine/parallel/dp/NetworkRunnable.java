@@ -21,6 +21,7 @@ import com.omega.engine.parallel.params.Llama3Parameters;
 import com.omega.engine.parallel.params.Parameters;
 import com.omega.example.transformer.dataset.parallel.params.DataLoaderParamters;
 import com.omega.example.transformer.dataset.parallel.params.SFTBinParamters;
+import com.omega.example.transformer.utils.ModelUtils;
 import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 
 import jcuda.Sizeof;
@@ -190,6 +191,7 @@ public class NetworkRunnable implements Callable<Boolean> {
 			 * broadcast master pararmters
 			 */
 			if(master) {
+				loadModel();
 				allReduce_broadcast();
 				System.out.println("broadcast master pararmters finish.");
 			}
@@ -217,6 +219,20 @@ public class NetworkRunnable implements Callable<Boolean> {
 		}
 		
 		return true;
+	}
+	
+	public void loadModel() {
+		if(dp.getPretrainModelPath() == null || dp.getPretrainModelPath().equals("")) {
+			return;
+		}
+		switch (networkType) {
+		case LLAMA3:
+			ModelUtils.loadModel((Llama3)getNetwork(), dp.getPretrainModelPath());
+			JCuda.cudaDeviceSynchronize();
+			break;
+		default:
+			break;
+		}
 	}
 	
 	public void step() throws InterruptedException, BrokenBarrierException {
@@ -311,20 +327,28 @@ public class NetworkRunnable implements Callable<Boolean> {
 				/**
 				 * collect diff
 				 */
-				allReduce_sum_asyn();
+//				allReduce_sum_asyn();
 //				JCuda.cudaDeviceSynchronize();
+				allReduce_sum_asyn2();
+				System.out.println("allReduce_sum cost:"+(System.nanoTime() - start1)/1e6+"ms");
 				/**
 				 * master update paramters
 				 */
+				long start_update = System.nanoTime();
 				this.getNetwork().update();
-				JCuda.cudaDeviceSynchronize();
+				CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
+				System.out.println("update network cost:"+(System.nanoTime() - start_update)/1e6+"ms");
 				
 				/**
 				 * broadcast master pararmters
 				 */
-				allReduce_broadcast_asyn();
+//				allReduce_broadcast_asyn();
 //				JCuda.cudaDeviceSynchronize();
-				System.out.println("update params cost:"+(System.nanoTime() - start1)/1e6+"ms");
+				long start_broadcast = System.nanoTime();
+				allReduce_broadcast_asyn2();
+				CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
+				System.out.println("broadcast params cost:"+(System.nanoTime() - start_broadcast)/1e6+"ms");
+				System.out.println("all update params cost:"+(System.nanoTime() - start1)/1e6+"ms");
 			}
 			
 //			/**
@@ -368,7 +392,7 @@ public class NetworkRunnable implements Callable<Boolean> {
 	}
 	
 	public void await() throws InterruptedException, BrokenBarrierException {
-		JCuda.cudaDeviceSynchronize();
+		CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
 		barriar.await();
 	}
 	
@@ -427,9 +451,9 @@ public class NetworkRunnable implements Callable<Boolean> {
 					Tensor tag = rank.getNetwork().deltaParamters.get(i);
 //					CUDAModules.checkCUDA(JCuda.cudaMemcpy(cache.getGpuData(), tag.getGpuData(), tag.dataLength * (long)Sizeof.FLOAT, cudaMemcpyKind.cudaMemcpyDeviceToDevice));
 					CUDAModules.checkCUDA(JCuda.cudaMemcpyPeer(cache.getGpuData(), rankId, tag.getGpuData(), key, tag.dataLength * (long)Sizeof.FLOAT));
-					JCuda.cudaDeviceSynchronize();
+					CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
 					getNetwork().tensorOP.add(src, cache, src);
-					JCuda.cudaDeviceSynchronize();
+					CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
 				}
 			}
 			getNetwork().tensorOP.div(src, dp.getThreads().size(), src);
@@ -442,14 +466,13 @@ public class NetworkRunnable implements Callable<Boolean> {
 
 		ExecutorService executorService = Executors.newFixedThreadPool(getNetwork().deltaParamters.size());
 		
-		allReduceCallables = new ArrayList<Callable<Boolean>>();
-		
-		if(allReduceCallables.size() <= 0) {
+		if(allReduceCallables == null || allReduceCallables.size() <= 0) {
 
+			allReduceCallables = new ArrayList<Callable<Boolean>>();
+			
 			for(int i = 0;i<getNetwork().deltaParamters.size();i++) {
-				List<cudaStream_t> cudaStreams = this.cudaStreams;
 				int idx = i;
-				cudaStream_t stream = cudaStreams.get(i);
+				cudaStream_t stream = this.cudaStreams.get(i);
 				CUstream cs = new CUstream(stream);
  				Callable<Boolean> o = new Callable<Boolean>() {
 					@Override
@@ -477,6 +500,25 @@ public class NetworkRunnable implements Callable<Boolean> {
 		
 		executorService.invokeAll(allReduceCallables);
 		executorService.shutdown();
+	}
+	
+	public void allReduce_sum_asyn2() throws InterruptedException {
+		for(int i = 0;i<getNetwork().deltaParamters.size();i++) {
+			cudaStream_t stream = this.cudaStreams.get(i);
+			CUstream cs = new CUstream(stream);
+			Tensor src = getNetwork().deltaParamters.get(i);
+			Tensor cache = cacheBoxs.get(i);
+			for(int key:dp.getThreads().keySet()) {
+				if(key != rankId) {
+					NetworkRunnable rank = dp.getThreads().get(key);
+					Tensor tag = rank.getNetwork().deltaParamters.get(i);
+					CUDAModules.checkCUDA(JCuda.cudaMemcpyPeerAsync(cache.getGpuData(), rankId, tag.getGpuData(), key, tag.dataLength * (long)Sizeof.FLOAT, stream));
+					getNetwork().tensorOP.add(src, cache, src, cs);
+				}
+			}
+			getNetwork().tensorOP.div(src, dp.getThreads().size(), src, cs);
+		}
+		CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
 	}
 	
 	public void ringAllReduce() {
@@ -560,9 +602,10 @@ public class NetworkRunnable implements Callable<Boolean> {
 	public void allReduce_broadcast_asyn() throws InterruptedException {
 		ExecutorService executorService = Executors.newFixedThreadPool(getNetwork().deltaParamters.size());
 		
-		broadcastCallables = new ArrayList<Callable<Boolean>>();
-		
-		if(broadcastCallables.size() <= 0) {
+		if(broadcastCallables == null || broadcastCallables.size() <= 0) {
+
+			broadcastCallables = new ArrayList<Callable<Boolean>>();
+			
 			for(int i = 0;i<getNetwork().paramters.size();i++) {
 				List<cudaStream_t> cudaStreams = this.cudaStreams;
 				int idx = i;
@@ -592,6 +635,23 @@ public class NetworkRunnable implements Callable<Boolean> {
 
 		executorService.invokeAll(broadcastCallables);
 		executorService.shutdown();
+	}
+	
+	public void allReduce_broadcast_asyn2(){
+		
+		for(int i = 0;i<getNetwork().paramters.size();i++) {
+			List<cudaStream_t> cudaStreams = this.cudaStreams;
+			Tensor src = getNetwork().paramters.get(i);
+			cudaStream_t stream = cudaStreams.get(i);
+			for(int key:dp.getThreads().keySet()) {
+				if(key != rankId) {
+					NetworkRunnable rank = dp.getThreads().get(key);
+					Tensor tag = rank.getNetwork().paramters.get(i);
+					CUDAModules.checkCUDA(JCuda.cudaMemcpyPeerAsync(tag.getGpuData(), key, src.getGpuData(), rankId, src.dataLength * (long)Sizeof.FLOAT, stream));
+				}
+			}
+		}
+//		CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
 	}
 	
 	public void allReduce_broadcast_diff() {

@@ -1,11 +1,15 @@
 package com.omega.engine.nn.layer;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.omega.common.data.Tensor;
 import com.omega.engine.ad.op.TensorOP;
 import com.omega.engine.gpu.BaseKernel;
 import com.omega.engine.gpu.CUDAManager;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.data.CacheDataSet;
+import com.omega.engine.nn.layer.utils.LayerHook;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.Updater;
@@ -86,6 +90,8 @@ public abstract class Layer {
 	 * cache data
 	 */
 	private CacheDataSet tampDataSet;
+	
+	private List<LayerHook> hooks;
 	
 	public boolean hasParams = false;
 	
@@ -260,6 +266,21 @@ public abstract class Layer {
 			accDW.clearGPU();
 			if(accDB != null) {
 				accDB.clearGPU();
+			}
+		}
+	}
+	
+	public void registerHook(LayerHook hook) {
+		if(hooks == null) {
+			hooks = new ArrayList<LayerHook>();
+		}
+		hooks.add(hook);
+	}
+	
+	public void runHooks() {
+		if(hooks != null) {
+			for(LayerHook hook:hooks) {
+				hook.runHookFn(this);
 			}
 		}
 	}

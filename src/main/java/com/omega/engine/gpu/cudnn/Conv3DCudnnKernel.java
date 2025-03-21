@@ -7,8 +7,9 @@ import static jcuda.jcudnn.cudnnDataType.CUDNN_DATA_FLOAT;
 import static jcuda.jcudnn.cudnnTensorFormat.CUDNN_TENSOR_NCHW;
 
 import com.omega.common.data.Tensor;
+import com.omega.common.utils.JsonUtils;
 import com.omega.engine.gpu.CUDAManager;
-import com.omega.engine.nn.layer.gpu.ConvBaseKernel;
+import com.omega.engine.nn.layer.gpu.Conv3DBaseKernel;
 import com.omega.engine.nn.network.Network;
 
 import jcuda.Pointer;
@@ -21,20 +22,17 @@ import jcuda.jcudnn.cudnnFilterDescriptor;
 import jcuda.jcudnn.cudnnTensorDescriptor;
 import jcuda.runtime.JCuda;
 
-public class ConvCudnnKernel extends ConvBaseKernel{
+public class Conv3DCudnnKernel extends Conv3DBaseKernel{
 	
 	private int C;
+	private int F;
 	private int H;
 	private int W;
 	
 	private int ko;
+	private int kf;
 	private int kh;
 	private int kw;
-	
-	private int on;
-	private int oc;
-	private int oh;
-	private int ow;
 	
 	private int padding = 0;
 	private int stride = 1;
@@ -56,13 +54,15 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 	private cudnnTensorDescriptor yDesc;
 	private cudnnConvolutionDescriptor convDesc;
 	
-	public ConvCudnnKernel(Network network,int C,int H,int W,int ko,int kh,int kw,int s,int p,CUDAManager cudaManager) {
+	public Conv3DCudnnKernel(Network network,int C,int F,int H,int W,int ko,int kf,int kh,int kw,int s,int p,CUDAManager cudaManager) {
 		super(cudaManager);
 		this.network = network;
 		this.C = C;
+		this.F = F;
 		this.H = H;
 		this.W = W;
 		this.ko = ko;
+		this.kf = kf;
 		this.kh = kh;
 		this.kw = kw;
 		this.stride = s;
@@ -80,33 +80,39 @@ public class ConvCudnnKernel extends ConvBaseKernel{
 
 	}
 	
+	public int[] computeStride(int[] size) {
+		int[] stride = new int[5];
+		for(int i = 4;i>=0;i--) {
+			stride[i] = (i == 4) ? 1 : size[i + 1] * stride[i + 1];
+		}
+		return stride;
+	}
+	
 	public void init(int number) {
 		
 		if(this.N != number) {
 			this.N = number;
 
-			int convDims = 2;
-			int[] padA = {padding, padding};
-			int[] weight = {ko, C, kh, kw};
-			int[] upscaleA = {1, 1};
+			int convDims = 3;
+			int[] padA = {padding, padding, padding};
+			int[] weight = {ko, C, kf, kh, kw};
+			int[] upscaleA = {1, 1, 1};
 			
-			int[] tensorOuputDimA = {N, C, H, W};
-			
+			int[] tensorOuputDimA = {N, C, F, H, W};
+			int[] strideA = computeStride(tensorOuputDimA);
 //			System.out.println(JsonUtils.toJson(tensorOuputDimA));
-			JCudnn.cudnnSetTensor4dDescriptor(xDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, N, C, H, W);
-			JCudnn.cudnnSetFilterNdDescriptor(kernelDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 4, weight);
+			
+			JCudnn.cudnnSetTensorNdDescriptor(xDesc, CUDNN_DATA_FLOAT, 5, tensorOuputDimA, strideA);
+			JCudnn.cudnnSetFilterNdDescriptor(kernelDesc, CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, 5, weight);
 
-			int[] filterStrideA = {stride, stride};
+			int[] filterStrideA = {stride, stride, stride};
 			JCudnn.cudnnSetConvolutionNdDescriptor(convDesc, convDims, padA, filterStrideA, upscaleA, CUDNN_CROSS_CORRELATION, CUDNN_DATA_FLOAT);
 			
-			handle(JCudnn.cudnnGetConvolutionNdForwardOutputDim(convDesc, xDesc, kernelDesc, 4, tensorOuputDimA));
+			handle(JCudnn.cudnnGetConvolutionNdForwardOutputDim(convDesc, xDesc, kernelDesc, 5, tensorOuputDimA));
 			
-			this.on = tensorOuputDimA[0];
-			this.oc = tensorOuputDimA[1];
-			this.oh = tensorOuputDimA[2];
-			this.ow = tensorOuputDimA[3];
-			
-			JCudnn.cudnnSetTensor4dDescriptor(yDesc, CUDNN_TENSOR_NCHW, CUDNN_DATA_FLOAT, this.on, this.oc, this.oh, this.ow);
+			int[] out_strideA = computeStride(tensorOuputDimA);
+			System.out.println(JsonUtils.toJson(tensorOuputDimA));
+			JCudnn.cudnnSetTensorNdDescriptor(yDesc, CUDNN_DATA_FLOAT, 5, tensorOuputDimA, out_strideA);
 
 			this.fw_algo = getForwardAlgorithm(convAlgorithm, xDesc, kernelDesc, convDesc, yDesc);
 			this.bkf_algo = getBKFGO(convDims, xDesc, yDesc, kernelDesc, convDesc);

@@ -144,6 +144,50 @@ public class DeepSeekTest {
 		}
 
 	}
+	
+	public static void dp_train_full_sft() {
+
+		try {
+
+			int[] deviceIds = new int[] {0, 1, 2, 3};
+
+			NetworkType networkType = NetworkType.LLAMA3;
+
+			int max_len = 512;
+			int embedDim = 512;
+			int headNum = 8;
+			int nKVHeadNum = 2;
+			int decoderNum = 16;
+			int vocabSize = 6400;
+
+			int batchSize = 16;
+			float lr = 5e-4f;
+
+			String trainPath = "/omega/dataset/sft_512_6400.bin";
+			String vocabPath = "/omega/models/vocab.json";
+			String mergesPath = "/omega/models/merges.txt";
+
+			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
+
+			SFTBinDataset trainData = new SFTBinDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
+
+			ParallelDataLoader pdl = new ParallelDataLoader(trainData, deviceIds);
+
+			Llama3Parameters parameters = new Llama3Parameters(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, headNum, nKVHeadNum, decoderNum, vocabSize, max_len, embedDim, false, false, false, lr);
+
+			DP dp = new DP(deviceIds, 0, networkType, parameters, pdl, 6);
+			dp.load("/omega/models/llama3-26-base-zh.model");
+			dp.train();
+
+			String save_model_path = "/omega/models/llama3-26-fullsft.model";
+			ModelUtils.saveModel((Llama3)dp.getMaster(), save_model_path);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
 
 	public static void testBinData() {
 		try {
@@ -263,8 +307,10 @@ public class DeepSeekTest {
 
 //			testBinData();
 
-			dp_train_pretrain();
+//			dp_train_pretrain();
 
+			dp_train_full_sft();
+			
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
