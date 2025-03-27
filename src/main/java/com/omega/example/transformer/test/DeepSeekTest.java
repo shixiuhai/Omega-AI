@@ -188,68 +188,128 @@ public class DeepSeekTest {
 		}
 
 	}
+	
+	
+	public static void dp_train_1024_sft() {
+
+		try {
+
+			int[] deviceIds = new int[] {0, 1, 2, 3};
+
+			NetworkType networkType = NetworkType.LLAMA3;
+
+			int max_len = 1024;
+			int embedDim = 512;
+			int headNum = 8;
+			int nKVHeadNum = 2;
+			int decoderNum = 16;
+			int vocabSize = 6400;
+
+			int batchSize = 7;
+			float lr = 5e-4f;
+
+			String trainPath = "/omega/dataset/sft_1024_6400.bin";
+			String vocabPath = "/omega/models/vocab.json";
+			String mergesPath = "/omega/models/merges.txt";
+
+			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
+
+			SFTBinDataset trainData = new SFTBinDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
+
+			ParallelDataLoader pdl = new ParallelDataLoader(trainData, deviceIds);
+
+			Llama3Parameters parameters = new Llama3Parameters(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, headNum, nKVHeadNum, decoderNum, vocabSize, max_len, embedDim, false, false, false, lr);
+
+			DP dp = new DP(deviceIds, 0, networkType, parameters, pdl, 2);
+			dp.load("/omega/models/llama3-26-fullsft.model");
+			dp.train();
+
+			String save_model_path = "/omega/models/llama3-sft-1024.model";
+			ModelUtils.saveModel((Llama3)dp.getMaster(), save_model_path);
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
+
+	}
 
 	public static void testBinData() {
 		try {
 
-			int batchSize = 32;
-			int max_len = 512;
+			int batchSize = 128;
+			int max_len = 1024;
 
-			String trainPath = "H:\\transformer_dataset\\sft_512_6400.bin";
+			String trainPath = "H:\\transformer_dataset\\sft_"+max_len+"_6400.bin";
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
 
 			BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
 
 			SFTBinDataset trainData = new SFTBinDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
+			
+			Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
 
-			int[] rankIds = new int[] {0, 1, 2};
+			float[] tmpInput = new float[batchSize * max_len];
 
-			ParallelDataLoader pdl = new ParallelDataLoader(trainData, rankIds);
+			Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
 
-			ExecutorService executorService = Executors.newFixedThreadPool(rankIds.length);
+			float[] tmpLabel = new float[batchSize * max_len];
 
-			for(int rankId:rankIds) {
-
-				ThreadDataset td = pdl.getDataloaders().get(rankId);
-				Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
-
-				float[] tmpInput = new float[batchSize * max_len];
-
-				Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
-
-				float[] tmpLabel = new float[batchSize * max_len];
-
-				int[] padCount = new int[] {0};
-				executorService.execute(new Runnable() {
-
-					@Override
-					public void run() {
-						// TODO Auto-generated method stub
-
-						try {
-
-							td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
-
-							for(int i = 0;i<100;i++) {
-								td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
-							}
-
-//							System.out.println(JsonUtils.toJson(tmpInput));
-//
-//							input.showDM();
-
-						} catch (Exception e) {
-							// TODO: handle exception
-							e.printStackTrace();
-						}
-
-					}
-				});
-
+			int[] padCount = new int[] {0};
+			
+			for(int i = 0;i<130000;i++) {
+				trainData.loadData(input, label, tmpInput, tmpLabel, padCount, i);
+				System.err.println(i);
 			}
 
-			executorService.shutdown();
+//			int[] rankIds = new int[] {0, 1, 2, 3};
+//
+//			ParallelDataLoader pdl = new ParallelDataLoader(trainData, rankIds);
+//
+//			ExecutorService executorService = Executors.newFixedThreadPool(rankIds.length);
+//
+//			for(int rankId:rankIds) {
+//
+//				ThreadDataset td = pdl.getDataloaders().get(rankId);
+//				Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
+//
+//				float[] tmpInput = new float[batchSize * max_len];
+//
+//				Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
+//
+//				float[] tmpLabel = new float[batchSize * max_len];
+//
+//				int[] padCount = new int[] {0};
+//				executorService.execute(new Runnable() {
+//
+//					@Override
+//					public void run() {
+//						// TODO Auto-generated method stub
+//
+//						try {
+//
+//							td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
+//
+//							for(int i = 0;i<100;i++) {
+//								td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
+//							}
+//
+////							System.out.println(JsonUtils.toJson(tmpInput));
+////
+////							input.showDM();
+//
+//						} catch (Exception e) {
+//							// TODO: handle exception
+//							e.printStackTrace();
+//						}
+//
+//					}
+//				});
+//
+//			}
+//
+//			executorService.shutdown();
 
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -305,11 +365,13 @@ public class DeepSeekTest {
 
 //			train_full_sft();
 
-//			testBinData();
+			testBinData();
 
 //			dp_train_pretrain();
 
-			dp_train_full_sft();
+//			dp_train_full_sft();
+			
+//			dp_train_1024_sft();
 			
 		} catch (Exception e) {
 			// TODO: handle exception

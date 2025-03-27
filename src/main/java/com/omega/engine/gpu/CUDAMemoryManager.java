@@ -35,6 +35,8 @@ public class CUDAMemoryManager {
 	
 	private List<Pointer> porints = new ArrayList<Pointer>();
 	
+	private Map<String,Tensor> privateCaches = new HashMap<String, Tensor>();
+	
 	public synchronized static Tensor getCache(String key,int N, int C, int H, int W) {
 		Tensor c = null;
 		if(caches.containsKey(key)) {
@@ -49,6 +51,25 @@ public class CUDAMemoryManager {
 //			System.err.println("["+key+"]:"+N * C * H * W);
 			c = Tensor.createGPUTensor(c, N, C, H, W, true);
 			caches.put(key, c);
+		}
+//		JCuda.cudaDeviceSynchronize();
+		return c;
+	}
+	
+	public Tensor getPrivateCaches(String key,int N, int C, int H, int W) {
+		Tensor c = null;
+		if(privateCaches.containsKey(key)) {
+			c = privateCaches.get(key);
+//			System.err.println("["+key+"]"+c.gpuLength+":["+N+":"+C+":"+H+":"+W+"]:"+N * C * H * W);
+			if(c.gpuLength < N * C * H * W) {
+				c = Tensor.createGPUTensor(c, N, C, H, W, true);
+			}else {
+				c = c.viewOrg(N, C, H, W);
+			}
+		}else {
+//			System.err.println("["+key+"]:"+N * C * H * W);
+			c = Tensor.createGPUTensor(c, N, C, H, W, true);
+			privateCaches.put(key, c);
 		}
 //		JCuda.cudaDeviceSynchronize();
 		return c;

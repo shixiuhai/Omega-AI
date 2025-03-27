@@ -47,6 +47,7 @@ public enum LayerType {
 	bert_output("bert_output"),
 	bert_encoder("bert_encoder"),
 	feed_forward("feed_forward"),
+	transformer_encoder("transformer_encoder"),
 	transformer_decoder("transformer_decoder"),
 	transformer_block("transformer_block"),
 	lstm("lstm"),

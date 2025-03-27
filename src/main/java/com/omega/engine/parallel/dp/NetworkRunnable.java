@@ -82,6 +82,7 @@ public class NetworkRunnable implements Callable<Boolean> {
 		case LLAMA3:
 			Llama3Parameters params = (Llama3Parameters) parameters;
 			network = new Llama3(params.lossType, params.updater, params.getHeadNum(), params.getnKVHeadNum(), params.getDecoderNum(), params.getVocabSize(), params.getTime(), params.getEmbedDim(), params.isBias(), params.isDropout(), params.isFlashAttention(), rankId);
+			network.gradCacheMode = true;
 			getNetwork().learnRate = params.learnRate;
 			this.lr = getNetwork().learnRate;
 			break;
@@ -278,7 +279,7 @@ public class NetworkRunnable implements Callable<Boolean> {
 			 * load data
 			 */
 			dp.getPd().getDataloaders().get(rankId).loadData(paramters);
-			
+
 			/**
 			 * forward
 			 */
@@ -307,18 +308,9 @@ public class NetworkRunnable implements Callable<Boolean> {
 				JCuda.cudaDeviceSynchronize();
 				network.putParamterGrads();
 			}
-			
-			/**
-			 * sum loss
-			 */
-			int count = input.number;
-			if(pad >= 0) {
-				count = paramters.getPadCount()[0];
-			}
-			this.currentError = MatrixOperation.sum(this.loss.syncHost()) / count;
-//			System.out.println(rankId+":"+currentError);
 			await();
-			
+//			System.out.println(rankId+":"+currentError);
+
 			/**
 			 * update params
 			 */
@@ -330,24 +322,24 @@ public class NetworkRunnable implements Callable<Boolean> {
 //				allReduce_sum_asyn();
 //				JCuda.cudaDeviceSynchronize();
 				allReduce_sum_asyn2();
-				System.out.println("allReduce_sum cost:"+(System.nanoTime() - start1)/1e6+"ms");
+//				System.out.println("allReduce_sum cost:"+(System.nanoTime() - start1)/1e6+"ms");
 				/**
 				 * master update paramters
 				 */
-				long start_update = System.nanoTime();
+//				long start_update = System.nanoTime();
 				this.getNetwork().update();
 				CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
-				System.out.println("update network cost:"+(System.nanoTime() - start_update)/1e6+"ms");
+//				System.out.println("update network cost:"+(System.nanoTime() - start_update)/1e6+"ms");
 				
 				/**
 				 * broadcast master pararmters
 				 */
 //				allReduce_broadcast_asyn();
 //				JCuda.cudaDeviceSynchronize();
-				long start_broadcast = System.nanoTime();
+//				long start_broadcast = System.nanoTime();
 				allReduce_broadcast_asyn2();
-				CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
-				System.out.println("broadcast params cost:"+(System.nanoTime() - start_broadcast)/1e6+"ms");
+//				CUDAModules.checkCUDA(JCuda.cudaDeviceSynchronize());
+//				System.out.println("broadcast params cost:"+(System.nanoTime() - start_broadcast)/1e6+"ms");
 				System.out.println("all update params cost:"+(System.nanoTime() - start1)/1e6+"ms");
 			}
 			
@@ -366,26 +358,30 @@ public class NetworkRunnable implements Callable<Boolean> {
 //			System.out.println("update params cost:"+(System.nanoTime() - start1)/1e6+"ms");
 
 			/**
+			 * dynamic update learnRate
+			 */
+			updateLRDynamic((trainIndex - 1) * dp.getPd().getCount_it() + it, dp.getTrainTime() * dp.getPd().getCount_it());
+			
+			/**
 			 * collect and compute loss
 			 */
+			int count = input.number;
+			if(pad >= 0) {
+				count = paramters.getPadCount()[0];
+			}
+			this.currentError = MatrixOperation.sum(this.loss.syncHost()) / count;
+			await();
 			if(master) {
-				
 				if(it % 100 == 0) {
 					Tokenizer tokenizer = dp.getPd().getDataloaders().get(rankId).tokenizer;
 					int batchSize = dp.getPd().getDataloaders().get(rankId).getBatchSize();
 					int time = output.number / dp.getPd().getDataloaders().get(rankId).getBatchSize();
 					this.accuracyBatchFisrt(input, output, label, time, batchSize, tokenizer, pad);
 				}
-				
 				allReduce_sum_loss(start, it);
 			}
 			
-			/**
-			 * dynamic update learnRate
-			 */
-			updateLRDynamic((trainIndex - 1) * dp.getPd().getCount_it() + it, dp.getTrainTime() * dp.getPd().getCount_it());
-			
-			await();
+//			await();
 			
 		}
 		
@@ -426,7 +422,7 @@ public class NetworkRunnable implements Callable<Boolean> {
 	    getNetwork().learnRate = (float)tlr.doubleValue();
 	}
 	
-	public void allReduce_sum_loss(long start,int it) {
+	public void allReduce_sum_loss(long start,int it) throws InterruptedException, BrokenBarrierException {
 		float finalLoss = 0.0f;
 		
 		for(int key:dp.getThreads().keySet()) {

@@ -35,7 +35,7 @@ public class SFTBinDataset extends DatasetLoader{
 	
 	private BinDataType dataType = BinDataType.unint32;
 	
-	private int index = 0;
+	private long index = 0;
 	
 	private int[] cache = null;
 	
@@ -63,6 +63,7 @@ public class SFTBinDataset extends DatasetLoader{
 	public void initBinReader() {
 		try {
 			file.seek(0);
+			index = 0;
 			System.out.println("dataset is ready.");
 		} catch (Exception e) {
 			// TODO: handle exception
@@ -74,7 +75,7 @@ public class SFTBinDataset extends DatasetLoader{
 		try {
 			file = new RandomAccessFile(getDataPath(), "r");
 			number = (int) (file.length() / max_len / byteUnit);
-			cache = new int[max_len+1];
+			cache = new int[max_len];
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -101,13 +102,12 @@ public class SFTBinDataset extends DatasetLoader{
 		try {
 
 			if((index + 1) * max_len * byteUnit <= file.length()) {
-//				System.out.println(index);
 				if(getDataType() == BinDataType.unint16) {
 					ModelUtils.readShort2Int(file, cache);
 				}else {
 					ModelUtils.loadIntData(file, cache);
 				}
-				file.seek(file.getFilePointer() - byteUnit);
+				file.seek(file.getFilePointer());
 				index++;
 			}else {
 				initBinReader();
@@ -218,15 +218,23 @@ public class SFTBinDataset extends DatasetLoader{
 
 	public int formatToIdx(int b,int[] onceToken,float[] input,float[] label) {
 		int number = 0;
+//		System.out.println(JsonUtils.toJson(onceToken));
 		for(int t = 0;t<max_len;t++) {
 			int curr = onceToken[t];
-			int next = onceToken[t+1];
+			int next = tokenizer.eos();
+			if(t+1 < onceToken.length) {
+				next = onceToken[t+1];
+			}else if(t+1 >= max_len && (curr == tokenizer.pad() || curr == tokenizer.eos())) {
+				next = tokenizer.pad();
+			}
+			
 			if(next != tokenizer.pad()) {
 				number++;
 			}
 			input[b * max_len + t] = curr;
 			label[b * max_len + t] = next;
 		}
+//		System.out.println(JsonUtils.toJson(label));
 		return number;
 	}
 

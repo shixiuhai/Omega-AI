@@ -15,7 +15,7 @@ import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * 
- * Layer Normalization Layer
+ * RMS Normalization Layer
  * 
  * @author Administrator
  * 

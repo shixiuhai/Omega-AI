@@ -33,6 +33,8 @@ public abstract class Network {
 	
 	public boolean CUDNN = false;
 	
+	public boolean gradCacheMode = false;
+	
 	public CUDAManager cudaManager;
 	
 	public TensorOP tensorOP;

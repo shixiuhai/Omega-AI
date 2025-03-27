@@ -250,13 +250,17 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer{
 	public void initBack() {
 		// TODO Auto-generated method stub
 		if(this.dattn == null){
-//			this.dvaccum = Tensor.createGPUTensor(this.dvaccum, batchSize, headNum, time, dk, true);
-			this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
-			this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
-			this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
-			this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
-//			this.dpreatt = Tensor.createGPUTensor(this.dpreatt, batchSize, headNum, time, time, true);
-//			this.dpreatt2 = Tensor.createGPUTensor(this.dpreatt2, batchSize, headNum, time, time, true);
+			if(network.gradCacheMode) {
+				this.dqt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dqt", batchSize, headNum, time, dk);
+				this.dkt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dkt", batchSize, headNum, time, dk);
+				this.dvt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dvt", batchSize, headNum, time, dk);
+				this.dattn = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dattn", batchSize, headNum, time, time);
+			}else {
+				this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
+				this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
+				this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
+				this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
+			}
 		}else {
 //			this.dvaccum.clearGPU();
 		}

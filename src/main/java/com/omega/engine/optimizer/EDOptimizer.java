@@ -10,7 +10,6 @@ import com.omega.common.utils.MathUtils;
 import com.omega.common.utils.MatrixOperation;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
-import com.omega.engine.gpu.CUDAModules;
 import com.omega.engine.nn.data.BaseData;
 import com.omega.engine.nn.grad.GradClipping;
 import com.omega.engine.nn.layer.Layer;
@@ -74,7 +73,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -212,7 +211,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -350,7 +349,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -493,7 +492,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -638,7 +637,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -782,7 +781,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -926,7 +925,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1073,7 +1072,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1226,7 +1225,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1350,7 +1349,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1495,7 +1494,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1615,7 +1614,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1739,7 +1738,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -1881,7 +1880,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2038,7 +2037,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2193,7 +2192,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2344,7 +2343,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2495,7 +2494,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2615,7 +2614,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2778,7 +2777,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -2945,7 +2944,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -3113,7 +3112,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -3270,7 +3269,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			
@@ -3429,7 +3428,7 @@ public class EDOptimizer extends Optimizer {
 		// TODO Auto-generated method stub
 		try {
 			
-			CUDAModules.initCUDAFunctions();
+//			CUDAModules.initCUDAFunctions();
 
 			this.dataSize = trainingData.number;
 			

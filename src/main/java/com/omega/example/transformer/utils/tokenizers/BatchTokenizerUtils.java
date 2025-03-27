@@ -102,7 +102,7 @@ public class BatchTokenizerUtils {
 					once = JsonUtils.gson.fromJson(line, HashMap.class);
 			    	List txts = once.get("conversations");
 					StringBuilder sb = new StringBuilder();
-					sb.append("<s>system\n您好，我是人工智能机器人，请问有什么可以帮助您？</s>\n");
+//					sb.append("<s>system\n您好，我是人工智能机器人，请问有什么可以帮助您？</s>\n");
 					String role = "user";
 					for(int j = 0;j<txts.size();j++) {
 						if(j % 2 == 0) {
@@ -120,8 +120,7 @@ public class BatchTokenizerUtils {
 					e.printStackTrace();
 				}
 
-		    	if(txt != null && txt.length() <= 512) {
-
+		    	if(txt != null && txt.length() <= maxLen) {
 			    	if(txt != null && !txt.equals("")) {
 			    		txtList.add(txt);
 			    	}
@@ -410,7 +409,7 @@ public class BatchTokenizerUtils {
 	
 	public static void writeShort(List<String> txtList, FileOutputStream writer) throws IOException {
 		System.out.println("writing.");
-		byte[] batch = new byte[4096];
+		byte[] batch = new byte[2048];
 		for(int i = 0;i<txtList.size();i++) {
 			String txt = txtList.get(i);
 			String[] idList = txt.split(" ");
@@ -756,20 +755,20 @@ public class BatchTokenizerUtils {
 //		
 //		txt2bin(txtPath, outputPath, 1, 2);
 		
-		int maxLen = 2048;
+		int maxLen = 1024;
 		
-//		String dataPath = "D:\\chroms_download\\sft_"+maxLen+".jsonl";
-//		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.txt";
+		String dataPath = "I:\\dataset\\sft_2048.jsonl";
+		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400_2.txt";
+		
+		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
+		
+		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
+		
+//		String txtPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.txt";
+//		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.bin";
 //		
-//		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
-//		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
-//		
-//		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
-		
-		String txtPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.txt";
-		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.bin";
-		
-		txt2bin(txtPath, outputPath, BinDataType.unint16);
+//		txt2bin(txtPath, outputPath, BinDataType.unint16);
 			
 //		String dataPath = "H:\\transformer_dataset\\pretrain_hq.jsonl";
 //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";

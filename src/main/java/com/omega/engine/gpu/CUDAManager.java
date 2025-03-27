@@ -44,7 +44,7 @@ public class CUDAManager {
 	
 	private final String CU_PATH = "cu/";
 	
-	private final String TMP_PATH = "/tmp/";
+//	private final String TMP_PATH = "/tmp/";
 	
 	private GPUOP op;
 	

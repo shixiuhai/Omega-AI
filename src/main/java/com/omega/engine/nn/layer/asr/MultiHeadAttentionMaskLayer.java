@@ -1,4 +1,4 @@
-package com.omega.engine.nn.layer.diffusion.unet;
+package com.omega.engine.nn.layer.asr;
 
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_N;
 import static jcuda.jcublas.cublasOperation.CUBLAS_OP_T;
@@ -8,7 +8,6 @@ import java.io.RandomAccessFile;
 import java.util.Map;
 
 import com.omega.common.data.Tensor;
-import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.gpu.GPUOP;
 import com.omega.engine.gpu.cudnn.SoftmaxCudnnKernel;
@@ -26,11 +25,11 @@ import com.omega.example.clip.utils.ClipModelUtils;
 import com.omega.example.transformer.utils.LagJsonReader;
 
 /**
- * UNetCrossAttentionLayer
+ * MultiHeadAttentionMaskLayer
  * @author Administrator
  *
  */
-public class UNetCrossAttentionLayer extends Layer{
+public class MultiHeadAttentionMaskLayer extends Layer{
 	
 	private int time;
 	
@@ -76,11 +75,13 @@ public class UNetCrossAttentionLayer extends Layer{
 
 	private Tensor dattn;
 	
+	private Tensor mask;
+	
 	private int batchSize = 1;
 	
 	private boolean dropout = false;
 	
-	public UNetCrossAttentionLayer(int embedDim,int kvDim,int headNum,int time,int kvTime,boolean bias,boolean dropout) {
+	public MultiHeadAttentionMaskLayer(int embedDim,int kvDim,int headNum,int time,int kvTime,boolean bias,boolean dropout) {
 		this.bias = bias;
 		this.time = time;
 		this.kvTime = kvTime;
@@ -99,7 +100,7 @@ public class UNetCrossAttentionLayer extends Layer{
 		this.initLayers();
 	}
 	
-	public UNetCrossAttentionLayer(int embedDim,int kvDim,int headNum,int time,int kvTime,boolean bias,boolean dropout,Network network) {
+	public MultiHeadAttentionMaskLayer(int embedDim,int kvDim,int headNum,int time,int kvTime,boolean bias,boolean dropout,Network network) {
 		this.bias = bias;
 		this.network = network;
 		if(this.updater == null) {
@@ -213,12 +214,12 @@ public class UNetCrossAttentionLayer extends Layer{
 
 	}
 	
-	public void output(Tensor context) {
+	public void output(Tensor q,Tensor k,Tensor v) {
 		// TODO Auto-generated method stub
 //		context.showShape();
-		this.qLinerLayer.forward(this.input);
-		this.kLinerLayer.forward(context);
-		this.vLinerLayer.forward(context);
+		this.qLinerLayer.forward(q);
+		this.kLinerLayer.forward(k);
+		this.vLinerLayer.forward(v);
 		
 		Tensor query = this.qLinerLayer.getOutput().view(batchSize, time, headNum, dk);
 		Tensor key = this.kLinerLayer.getOutput().view(batchSize, kvTime, headNum, dk);
@@ -254,6 +255,10 @@ public class UNetCrossAttentionLayer extends Layer{
 
 		Tensor_OP().mul(preatt, d_k, preatt);
 
+		if(mask != null) {
+			Tensor_OP().bool(preatt, mask, preatt, 1e-9f);
+		}
+		
 		softmaxKernel.softmax(preatt, attn, batchSize * headNum * time);
 
 		Tensor tmp = attn;
@@ -302,9 +307,14 @@ public class UNetCrossAttentionLayer extends Layer{
 ////		dattn.showShape();
 ////		dattn.showDMByOffsetRed(0, 64, "dattn");
 		float d_k = (float) (1.0f / Math.sqrt(dk));
+		softmaxKernel.softmax_backward(attn, dattn, dattn);
+		if(mask != null) {
+			Tensor_OP().bool(dattn, mask, dattn, 1e-9f);
+		}
+		Tensor_OP().mul(dattn, d_k, dattn);
 ////
 //		TensorOP.mul(dattn, d_k, dattn);
-		attentionKernel.softmax_kv_unmask_backward(dattn, attn, batchSize, time, kvTime, headNum, d_k);
+//		attentionKernel.softmax_kv_unmask_backward(dattn, attn, batchSize, time, kvTime, headNum, d_k);
 //		dattn.showDMByOffsetRed(0, 64, "dattn");
 		Tensor dpreatt = dattn;
 
@@ -447,20 +457,39 @@ public class UNetCrossAttentionLayer extends Layer{
 		// TODO Auto-generated method stub
 	}
 	
-	public void forward(Tensor input,Tensor context) {
+	public void forward(Tensor q,Tensor k,Tensor v) {
 		// TODO Auto-generated method stub
 		/**
 		 * 参数初始化
 		 */
-		this.init(input);
+		this.init(q);
 		/**
 		 * 设置输入
 		 */
-		this.setInput(input);
+		this.setInput(q);
 		/**
 		 * 计算输出
 		 */
-		this.output(context);
+		this.output(q, k, v);
+	}
+	
+	public void forward(Tensor q,Tensor k,Tensor v,Tensor mask) {
+		// TODO Auto-generated method stub
+		/**
+		 * 参数初始化
+		 */
+		this.init(q);
+		/**
+		 * 设置输入
+		 */
+		this.setInput(q);
+		
+		this.mask = mask;
+		
+		/**
+		 * 计算输出
+		 */
+		this.output(q, k, v);
 	}
 	
 	@Override
@@ -567,11 +596,11 @@ public class UNetCrossAttentionLayer extends Layer{
 		float[] cdata = RandomUtils.order(batchSize * context_time * context_dim, 0.001f, 0.001f);
 		Tensor context = new Tensor(batchSize * context_time, 1, 1, context_dim, cdata, true);
 		
-		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
+//		float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
 		
 		Tensor delta = new Tensor(batchSize * time, 1, 1, embedDim, data, true);
 		
-		UNetCrossAttentionLayer mal = new UNetCrossAttentionLayer(embedDim, context_dim, headNum, time, context_time, false, false, tf);
+		MultiHeadAttentionMaskLayer mal = new MultiHeadAttentionMaskLayer(embedDim, context_dim, headNum, time, context_time, false, false, tf);
 		
 		String weight = "H:\\model\\crossAttn.json";
 		loadWeight(LagJsonReader.readJsonFileSmallWeight(weight), mal, true);
@@ -580,7 +609,7 @@ public class UNetCrossAttentionLayer extends Layer{
 //			input.showDM();
 			tf.train_time++;
 			
-			mal.forward(input, context);
+			mal.forward(input, context, context);
 			
 			mal.getOutput().showShape();
 			
@@ -596,7 +625,7 @@ public class UNetCrossAttentionLayer extends Layer{
 		
 	}
 	
-	public static void loadWeight(Map<String, Object> weightMap, UNetCrossAttentionLayer network, boolean showLayers) {
+	public static void loadWeight(Map<String, Object> weightMap, MultiHeadAttentionMaskLayer network, boolean showLayers) {
 		if(showLayers) {
 			for(String key:weightMap.keySet()) {
 				System.out.println(key);

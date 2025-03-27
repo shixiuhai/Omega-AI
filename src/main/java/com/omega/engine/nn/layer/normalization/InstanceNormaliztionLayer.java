@@ -12,7 +12,7 @@ import com.omega.engine.updater.UpdaterFactory;
 
 /**
  * 
- * Batch Normalization Layer
+ * Instance Normalization Layer
  * 
  * @author Administrator
  * 

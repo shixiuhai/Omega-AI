@@ -1,23 +1,28 @@
-package com.omega.engine.nn.layer.transformer;
+package com.omega.engine.nn.layer.asr;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.omega.common.data.Tensor;
+import com.omega.engine.nn.layer.EmbeddingIDLayer;
 import com.omega.engine.nn.layer.FullyLayer;
 import com.omega.engine.nn.layer.Layer;
 import com.omega.engine.nn.layer.LayerType;
-import com.omega.engine.nn.layer.active.GeluLayer;
-import com.omega.engine.nn.layer.normalization.LNLayer;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.updater.UpdaterFactory;
 
 /**
- * PoswiseFeedForward Layer
+ * ASREncoder
  * @author Administrator
  *
  */
-public class PoswiseFeedForwardLinearLayer extends Layer{
+public class ASREncoder extends Layer{
+	
+	private int wavDim;
+	
+	private int time;
 	
 	private int embedDim = 0;
 	
@@ -25,76 +30,69 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	
 	private boolean bias = false;
 	
-	private boolean layer_norm = false;
+	private int headNum = 8;
 	
-	private FullyLayer linear1;
-	private GeluLayer relu1;
-	private FullyLayer linear2;
-
-	private LNLayer lnLayer;
+	private int n_layers = 4;
 	
-	private Tensor ro;
-
-	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm) {
+	private FullyLayer feature_emb;
+	
+	private EmbeddingIDLayer pos_emb;
+	private List<ASREncoderLayer> encoders;
+	
+	private Tensor positions;
+	
+	public ASREncoder(int wavDim,int time,int embedDim,int headNum,int nChannel,int n_layers,boolean bias) {
+		this.wavDim = wavDim;
+		this.time = time;
+		this.headNum = headNum;
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
+		this.n_layers = n_layers;
 		this.bias = bias;
-		this.layer_norm = layer_norm;
-		this.oChannel = 1;
-		this.oHeight = 1;
-		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
-	public PoswiseFeedForwardLinearLayer(int embedDim,int nChannel,boolean bias,boolean layer_norm,Network network) {
+	public ASREncoder(int wavDim,int time,int embedDim,int headNum,int nChannel,int n_layers,boolean bias,Network network) {
 		this.network = network;
 		if(this.updater == null) {
 			this.setUpdater(UpdaterFactory.create(network));
 		}
+		this.wavDim = wavDim;
+		this.time = time;
+		this.headNum = headNum;
 		this.embedDim = embedDim;
 		this.nChannel = nChannel;
+		this.n_layers = n_layers;
 		this.bias = bias;
-		this.layer_norm = layer_norm;
-		this.oChannel = 1;
-		this.oHeight = 1;
-		this.oWidth = embedDim;
 		this.initLayers();
 	}
 	
 	public void initLayers() {
 		
-		this.linear1 = new FullyLayer(embedDim, nChannel, bias, network);
-
-		this.relu1 = new GeluLayer(linear1);
+		this.feature_emb = new FullyLayer(wavDim, embedDim, bias, network);
 		
-		this.linear2 = new FullyLayer(nChannel, embedDim, bias, network);
-
-		if(this.layer_norm) {
-			this.lnLayer = new LNLayer(this.linear2);
+		this.pos_emb = new EmbeddingIDLayer(time, embedDim, true, network);
+		pos_emb.weight = pos_emb.getTimeEMB(time, embedDim);
+		
+		encoders = new ArrayList<ASREncoderLayer>();
+		
+		for(int i = 0;i<n_layers;i++) {
+			ASREncoderLayer decoderLayer = new ASREncoderLayer(headNum, time, embedDim, nChannel, bias, false, network);
+			encoders.add(decoderLayer);
 		}
-		
+
 	}
 	
 	@Override
 	public void init() {
 		// TODO Auto-generated method stub
 		this.number = this.input.number;
-		if(this.ro == null || this.ro.number != this.number) {
-			this.ro = Tensor.createTensor(this.ro, number, 1, 1, embedDim, true);
-		} 
-//		resize();
-	}
-	
-	public void resize() {
-		this.ro.viewOrg();
 	}
 	
 	@Override
 	public void initBack() {
 		// TODO Auto-generated method stub
-//		if(this.cache_delta == null || output.number != cache_delta.number){
-//			this.cache_delta = new Tensor(number, output.channel, output.height, output.width, true);
-//		}
+		
 	}
 
 	@Override
@@ -107,21 +105,40 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	public void output() {
 		// TODO Auto-generated method stub
 		
-		linear1.forward(input);
+		feature_emb.forward(input);
 		
-		relu1.forward(linear1.getOutput());
-
-		linear2.forward(relu1.getOutput());
+		pos_emb.forward(positions);
 		
-		Tensor_OP().add(linear2.getOutput(), this.input, this.ro);
+		Tensor_OP().add(feature_emb.getOutput(), pos_emb.getOutput(), feature_emb.getOutput());
 		
-		if(this.layer_norm) {
-			this.lnLayer.forward(ro);
-			this.output = this.lnLayer.getOutput();
-		}else {
-			this.output = ro;
+		Tensor encoderOutput = feature_emb.getOutput();
+		
+		for(int i = 0;i<n_layers;i++) {
+			encoders.get(i).forward(encoderOutput);
+			encoderOutput = encoders.get(i).getOutput();
 		}
 
+		this.output = encoderOutput;
+		
+	}
+	
+	public void output(Tensor mask,Tensor positions) {
+		// TODO Auto-generated method stub
+		
+		feature_emb.forward(input);
+		
+		pos_emb.forward(positions);
+		
+		Tensor_OP().add(feature_emb.getOutput(), pos_emb.getOutput(), feature_emb.getOutput());
+		
+		Tensor encoderOutput = feature_emb.getOutput();
+		
+		for(int i = 0;i<n_layers;i++) {
+			encoders.get(i).forward(encoderOutput, mask);
+			encoderOutput = encoders.get(i).getOutput();
+		}
+
+		this.output = encoderOutput;
 	}
 	
 	@Override
@@ -133,21 +150,15 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	@Override
 	public void diff() {
 		// TODO Auto-generated method stub
-		if(this.layer_norm) {
-			this.lnLayer.back(delta);
-//			baseKernel.copy_gpu(delta, this.cache_delta, delta.getDataLength(), 1, 1);
-			this.linear2.back(this.lnLayer.diff);
-		}else {
-			this.linear2.back(this.delta);
+		Tensor encoderDiff = delta;
+		for(int i = n_layers - 1;i>=0;i--) {
+			encoders.get(i).back(encoderDiff);
+			encoderDiff = encoders.get(i).diff;
 		}
-
-		relu1.back(this.linear2.diff);
 		
-		linear1.back(relu1.diff);
+		feature_emb.back(encoderDiff);
 		
-		Tensor_OP().add(this.linear1.diff, this.lnLayer.diff, this.linear1.diff);
-
-		this.diff = this.linear1.diff;
+		this.diff = feature_emb.diff;
 		
 	}
 
@@ -206,6 +217,23 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		
 	}
 	
+	public void forward(Tensor input,Tensor mask,Tensor positions) {
+		// TODO Auto-generated method stub
+		/**
+		 * 设置输入
+		 */
+		this.setInput(input);
+		/**
+		 * 参数初始化
+		 */
+		this.init();
+		/**
+		 * 计算输出
+		 */
+		this.output(mask, positions);
+		
+	}
+	
 	@Override
 	public void back(Tensor delta) {
 		// TODO Auto-generated method stub
@@ -229,10 +257,9 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	@Override
 	public void update() {
 		// TODO Auto-generated method stub
-		linear1.update();
-		linear2.update();
-		if(layer_norm) {
-			lnLayer.update();
+		feature_emb.update();
+		for(int i = 0;i<n_layers;i++) {
+			encoders.get(i).update();
 		}
 	}
 
@@ -245,7 +272,7 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 	@Override
 	public LayerType getLayerType() {
 		// TODO Auto-generated method stub
-		return LayerType.poswise_feed_forward;
+		return LayerType.transformer_encoder;
 	}
 
 	@Override
@@ -265,37 +292,28 @@ public class PoswiseFeedForwardLinearLayer extends Layer{
 		// TODO Auto-generated method stub
 		
 	}
-	
+
 	@Override
 	public void accGrad(float scale) {
 		// TODO Auto-generated method stub
-		linear1.accGrad(scale);
-		linear2.accGrad(scale);
-		if(layer_norm) {
-			lnLayer.accGrad(scale);
+		feature_emb.accGrad(scale);
+		for(int i = 0;i<n_layers;i++) {
+			encoders.get(i).accGrad(scale);
 		}
 	}
 	
-
 	public void saveModel(RandomAccessFile outputStream) throws IOException {
-		linear1.saveModel(outputStream);
-		linear2.saveModel(outputStream);
-		if(layer_norm) {
-			lnLayer.saveModel(outputStream);
+		feature_emb.saveModel(outputStream);
+		for(int i = 0;i<n_layers;i++) {
+			encoders.get(i).saveModel(outputStream);
 		}
 	}
 	
 	public void loadModel(RandomAccessFile inputStream) throws IOException {
-		linear1.loadModel(inputStream);
-		linear2.loadModel(inputStream);
-		if(layer_norm) {
-			lnLayer.loadModel(inputStream);
+		feature_emb.loadModel(inputStream);
+		for(int i = 0;i<n_layers;i++) {
+			encoders.get(i).loadModel(inputStream);
 		}
 	}
 	
-	public static void main(String[] args) {
-		
-	}
-
-
 }
