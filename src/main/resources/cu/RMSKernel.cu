@@ -180,3 +180,96 @@ __global__ void rmsnorm_backward_kernel1(float *dinp, float *dweight,const float
         dinp_bt[i] = dout_bt[i] * weight[i] / rms + drms * inp_bt[i];
     }
 }
+
+extern "C"
+__global__ void rmsnorm_forward_kernel2(float *__restrict__ out, const float *__restrict__ inp,
+                                        const float *__restrict__ weight,
+                                        int N, int C)
+{
+    namespace cg = cooperative_groups;
+    cg::thread_block block = cg::this_thread_block();
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+
+    // Calculate thread index within grid (each warp handles one row)
+    int idx = blockIdx.x * warp.meta_group_size() + warp.meta_group_rank();
+    if (idx >= N)
+    {
+        return;
+    }
+
+    // Pointer to input row
+    const float *x = inp + idx * C;
+
+    // RMS Calculation: First calculate sum of squares
+    float sum_squares = 0.0f;
+    for (int i = warp.thread_rank(); i < C; i += warp.size())
+    {
+        sum_squares += x[i] * x[i];
+    }
+
+    // Reduce sum across threads within the warp
+    sum_squares = cg::reduce(warp, sum_squares, cg::plus<float>{});
+
+    // Calculate RMS
+    float rms = sqrtf(sum_squares / C + 1e-5f);
+
+    // Final normalization and scaling by weight/bias
+    float *o = out + idx * C;
+    for (int c = warp.thread_rank(); c < C; c += warp.size())
+    {
+        float n = __ldcs(x + c) / rms;          // Normalized output
+        __stcs(o + c, n * weight[c]); // Scale, shift and write output
+    }
+}
+
+extern "C"
+__global__ void rmsnorm_backward_kernel2(float *__restrict__ dinp, float *__restrict__ dweight,
+                                         const float *__restrict__ dout, const float *__restrict__ inp, const float *__restrict__ weight,
+                                         int N, int C)
+{
+    namespace cg = cooperative_groups;
+    cg::thread_block block = cg::this_thread_block();
+    cg::thread_block_tile<32> warp = cg::tiled_partition<32>(block);
+
+    // Calculate thread index within grid (each warp handles one row)
+    int idx = blockIdx.x * warp.meta_group_size() + warp.meta_group_rank();
+    if (idx >= N)
+        return;
+
+    const float eps = 1e-5f;
+    const float *dout_bt = dout + idx * C;
+    const float *inp_bt = inp + idx * C;
+    float *dinp_bt = dinp + idx * C;
+
+    // Compute the RMS using cooperative group reduction
+    float sum_squares = 0.0f;
+    for (int i = warp.thread_rank(); i < C; i += warp.size())
+    {
+        sum_squares += inp_bt[i] * inp_bt[i];
+    }
+    sum_squares = cg::reduce(warp, sum_squares, cg::plus<float>());
+    float rms = sqrtf(sum_squares / C + eps);
+
+    // Calculate the gradients for the weights and biases (accumulated across threads)
+    for (int i = warp.thread_rank(); i < C; i += warp.size())
+    {
+        float norm = inp_bt[i] / rms;
+        // Accumulate gradient for bias and weight using atomicAdd with warp-level synchronization
+        atomicAdd(&dweight[i], norm * dout_bt[i]);
+    }
+
+    // Compute drms (gradient with respect to rms)
+    float drms = 0.0f;
+    for (int i = warp.thread_rank(); i < C; i += warp.size())
+    {
+        drms += inp_bt[i] * dout_bt[i] * weight[i];
+    }
+    drms = cg::reduce(warp, drms, cg::plus<float>());
+    drms = drms * (-1.0f / (rms * rms * rms * C));
+
+    // Step 4: Compute gradients for inputs
+    for (int i = warp.thread_rank(); i < C; i += warp.size())
+    {
+        dinp_bt[i] = dout_bt[i] * weight[i] / rms + drms * inp_bt[i];
+    }
+}
