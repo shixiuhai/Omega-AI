@@ -1,7 +1,6 @@
 package com.omega.example.transformer.dataset;
 
 import com.omega.common.data.Tensor;
-import com.omega.example.transformer.dataset.parallel.params.DataLoaderParamters;
 import com.omega.example.transformer.utils.tokenizers.Tokenizer;
 
 public abstract class JSONDatasetLoader {

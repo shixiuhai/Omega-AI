@@ -46,7 +46,7 @@ public class BatchTokenizerUtils {
 //		    	System.err.println(line);
 		    	String txt = once.get("text").toString();
 		    	
-		    	if(txt.length() <= 512) {
+		    	if(txt.length() <= maxLen) {
 
 			    	if(txt != null && !txt.equals("")) {
 			    		txtList.add(txt);
@@ -120,7 +120,7 @@ public class BatchTokenizerUtils {
 					e.printStackTrace();
 				}
 
-		    	if(txt != null && txt.length() <= maxLen) {
+		    	if(txt != null) {
 			    	if(txt != null && !txt.equals("")) {
 			    		txtList.add(txt);
 			    	}
@@ -171,9 +171,9 @@ public class BatchTokenizerUtils {
 			int i = 1;
 			while ((line = bufferedReader.readLine()) != null) {
 		    	once = JsonUtils.gson.fromJson(line, HashMap.class);
-		    	System.err.println(line);
+//		    	System.err.println(line);
 		    	String txt = once.get("text");
-		    	
+		    	txt = "<s>" + txt + "</s>";
 		    	if(txt.length() <= 512) {
 
 			    	if(txt != null && !txt.equals("")) {
@@ -181,8 +181,9 @@ public class BatchTokenizerUtils {
 			    	}
 			    	
 			    	if(i > 1 && i % batchSize == 0) {
-			    		EncodeEx.encode(txtList, ids, bpe);
-			    		write(txtList, ids, writer, bpe);
+			    		EncodeExMaxLen.encode(txtList, ids, bpe, 512);
+//			    		write(txtList, ids, writer, bpe);
+			    		writeIn(txtList, ids, writer);
 			    		txtList.clear();
 			    	}
 
@@ -192,8 +193,9 @@ public class BatchTokenizerUtils {
 		    	
 		    }
 			if(txtList.size() > 0) {
-				EncodeEx.encode(txtList, ids, bpe);
-	    		write(txtList, ids, writer, bpe);
+				EncodeExMaxLen.encode(txtList, ids, bpe, 512);
+//	    		write(txtList, ids, writer, bpe);
+				writeIn(txtList, ids, writer);
 			}
 		    bufferedReader.close();
 		    writer.close();
@@ -383,9 +385,9 @@ public class BatchTokenizerUtils {
 		}
 	}
 	
-	public static void writeBin(List<String> txtList, FileOutputStream writer, BinDataType dataType) throws IOException {
+	public static void writeBin(List<String> txtList, FileOutputStream writer, BinDataType dataType,int maxLen) throws IOException {
 		if(dataType == BinDataType.unint16) {
-			writeShort(txtList, writer);
+			writeShort(txtList, writer, maxLen);
 		}else {
 			writeInt(txtList, writer);
 		}
@@ -410,6 +412,23 @@ public class BatchTokenizerUtils {
 	public static void writeShort(List<String> txtList, FileOutputStream writer) throws IOException {
 		System.out.println("writing.");
 		byte[] batch = new byte[2048];
+		for(int i = 0;i<txtList.size();i++) {
+			String txt = txtList.get(i);
+			String[] idList = txt.split(" ");
+			for(int j = 0;j<idList.length;j++) {
+				String str = idList[j];
+				short s = Short.parseShort(str);
+				byte[] bs = ModelUtils.s2b(s);
+				batch[j * 2] = bs[0];
+				batch[j * 2 + 1] = bs[1];
+			}
+			writer.write(batch);
+		}
+	}
+	
+	public static void writeShort(List<String> txtList, FileOutputStream writer,int maxLen) throws IOException {
+		System.out.println("writing.");
+		byte[] batch = new byte[maxLen * 2];
 		for(int i = 0;i<txtList.size();i++) {
 			String txt = txtList.get(i);
 			String[] idList = txt.split(" ");
@@ -623,7 +642,7 @@ public class BatchTokenizerUtils {
 		
 	}
 	
-	public static void txt2bin(String dataPath,String outputPath,BinDataType dataType) {
+	public static void txt2bin(String dataPath,String outputPath,BinDataType dataType,int maxLen) {
 		
 		try {
 			File file = new File(outputPath);
@@ -643,7 +662,7 @@ public class BatchTokenizerUtils {
 				txtList.add(line);
 		    	
 		    	if(i > 1 && i % batchSize == 0) {
-		    		writeBin(txtList, writer, dataType);
+		    		writeBin(txtList, writer, dataType, maxLen);
 		    		txtList.clear();
 		    	}
 
@@ -652,7 +671,7 @@ public class BatchTokenizerUtils {
 		    	
 		    }
 			if(txtList.size() > 0) {
-				writeBin(txtList, writer, dataType);
+				writeBin(txtList, writer, dataType, maxLen);
 			}
 		    bufferedReader.close();
 		    writer.close();
@@ -707,7 +726,7 @@ public class BatchTokenizerUtils {
 	
 	public static void main(String[] args) {
 		
-//		String dataPath = "H:\\transformer_dataset\\mobvoi_seq_monkey_general_open_corpus\\mobvoi_seq_monkey_general_open_corpus.jsonl";
+//		String dataPath = "H:\\transformer_dataset\\mobvoi_seq_monkey_general_open_corpus.jsonl";
 //		String outputPath = "H:\\transformer_dataset\\monkey_idx_6400_all_vocab.txt";
 //		
 //		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
@@ -755,20 +774,20 @@ public class BatchTokenizerUtils {
 //		
 //		txt2bin(txtPath, outputPath, 1, 2);
 		
-		int maxLen = 1024;
+		int maxLen = 512;
 		
-		String dataPath = "I:\\dataset\\sft_2048.jsonl";
-		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400_2.txt";
-		
-		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
-		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
-		
-		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
-		
-//		String txtPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.txt";
-//		String outputPath = "H:\\transformer_dataset\\sft_"+maxLen+"_6400.bin";
+//		String dataPath = "I:\\dataset\\sft_1024.jsonl";
+//		String outputPath = "H:\\transformer_dataset\\sft_1024_6400_2.txt";
 //		
-//		txt2bin(txtPath, outputPath, BinDataType.unint16);
+//		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+//		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt"; 
+//		
+//		encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
+		
+		String txtPath = "H:\\transformer_dataset\\monkey_idx_6400_all_vocab.txt";
+		String outputPath = "H:\\transformer_dataset\\monkey_idx_6400_all_vocab.bin";
+		
+		txt2bin(txtPath, outputPath, BinDataType.unint16, maxLen);
 			
 //		String dataPath = "H:\\transformer_dataset\\pretrain_hq.jsonl";
 //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";

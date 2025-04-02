@@ -133,7 +133,7 @@ public class RMSLayer extends NormalizationLayer {
 	}
 	
 	public void init(Tensor input) {
-
+		
 		this.number = input.number;
 		
 		if(this.bnType == null) {
@@ -153,11 +153,6 @@ public class RMSLayer extends NormalizationLayer {
 
 		if(this.gamma == null) {
 			this.gamma = new Tensor(1, 1, 1, meanNum, MatrixUtils.one(this.meanNum), true);
-//			if(network != null) {
-//				this.diffGamma = this.network.createParamterGrad(1, 1, 1, meanNum, true);
-//			}else {
-//				this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
-//			}
 			this.diffGamma = new Tensor(1, 1, 1, meanNum, true);
 		}
 		

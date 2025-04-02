@@ -52,6 +52,8 @@ public class PreTrainDataset extends BaseTokenizer{
 	
 	private int[] cache = null;
 	
+	private short[] cacheShort = null;
+	
 	private CompletableFuture<Boolean> cf;
 	
 	private BinDataType dataType = BinDataType.unint32;
@@ -134,6 +136,7 @@ public class PreTrainDataset extends BaseTokenizer{
 			file = new RandomAccessFile(dataPath, "r");
 			number = (int) (file.length() / max_len / byteUnit);
 			cache = new int[max_len + 1];
+			cacheShort = new short[max_len + 1];
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

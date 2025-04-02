@@ -162,7 +162,7 @@ public class LlamaTransformerDecoder extends Layer{
 	
 	public void output(Tensor cos,Tensor sin) {
 		// TODO Auto-generated method stub
-	
+//		input.showDMByOffset(0, 100);
 		getSrc_emb().forward(input);
 
 		Tensor out1 = getSrc_emb().getOutput();

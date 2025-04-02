@@ -39,6 +39,8 @@ public class SFTBinTheads extends ThreadDataset{
 	
 	private int[] cache = null;
 	
+	private short[] cacheShort = null;
+	
 	private int[] tmpCount = new int[] {0};
 	
 	private int byteUnit = 4;
@@ -82,7 +84,8 @@ public class SFTBinTheads extends ThreadDataset{
 		try {
 			file = new RandomAccessFile(dataPath, "r");
 			number = (int) (file.length() / max_len / byteUnit);
-			cache = new int[max_len+1];
+			cache = new int[max_len * getBatchSize()];
+			cacheShort = new short[max_len * getBatchSize()];
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();
@@ -155,12 +158,14 @@ public class SFTBinTheads extends ThreadDataset{
 	public CompletableFuture<Boolean> loadAsyncData(float[] input,float[] label,int[] counts) {
 		CompletableFuture<Boolean> cf = CompletableFuture.supplyAsync(()-> {
 			try {
-				int number = 0;
-				for(int b = 0;b<getBatchSize();b++) {
-					int[] onceToken = loadData();
-					int count = formatToIdx(b, onceToken, input, label);
-					number += count;
-				}
+//				int number = 0;
+//				for(int b = 0;b<getBatchSize();b++) {
+//					int[] onceToken = loadData();
+//					int count = formatToIdx(b, onceToken, input, label);
+//					number += count;
+//				}
+				int[] onceToken = loadBatchData();
+				int number = formatToIdx(onceToken, input, label);
 				counts[0] = number;
 			} catch (Exception e) {
 				// TODO: handle exception
@@ -170,7 +175,29 @@ public class SFTBinTheads extends ThreadDataset{
 		});
 		return cf;
 	}
+	
+	public int[] loadBatchData() {
+		
+		try {
+			if((index + 1) * getBatchSize() * max_len * byteUnit <= file.length()) {
+				if(dataType == BinDataType.unint16) {
+					ModelUtils.readShort2Int(file, cache, cacheShort);
+				}else {
+					ModelUtils.loadIntData(file, cache);
+				}
+				index++;
+			}else {
+				initBinReader();
+				return loadData();
+			}
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+		}
 
+		return cache;
+	}
+	
 	public int formatToIdx(int b,int[] onceToken,float[] input,float[] label) {
 		int number = 0;
 		for(int t = 0;t<max_len;t++) {
@@ -182,6 +209,31 @@ public class SFTBinTheads extends ThreadDataset{
 			input[b * max_len + t] = curr;
 			label[b * max_len + t] = next;
 		}
+		return number;
+	}
+	
+	public int formatToIdx(int[] onceToken,float[] input,float[] label) {
+		int number = 0;
+//		System.out.println(JsonUtils.toJson(onceToken));
+		for(int b = 0;b<getBatchSize();b++) {
+			for(int t = 0;t<max_len;t++) {
+				int curr = onceToken[b * max_len + t];
+				int next = tokenizer.eos();
+				if(t+1 < max_len) {
+					next = onceToken[b * max_len + t + 1];
+				}else if(t+1 >= max_len && (curr == tokenizer.pad() || curr == tokenizer.eos())) {
+					next = tokenizer.pad();
+				}
+				
+				if(next != tokenizer.pad()) {
+					number++;
+				}
+				input[b * max_len + t] = curr;
+				label[b * max_len + t] = next;
+			}
+		}
+		
+//		System.out.println(JsonUtils.toJson(label));
 		return number;
 	}
 

@@ -111,12 +111,12 @@ public class Llama3Test {
 			boolean flashAttention = false;
 			int batchSize = 2;
 			int max_len = 512;
-			int embedDim = 512;
-			int head_num = 16;
-			int nKVHeadNum = 8;
-			int decoderNum = 8;
+			int embedDim = 128;
+			int head_num = 2;
+			int nKVHeadNum = 2;
+			int decoderNum = 4;
 			
-			String trainPath = "H:\\transformer_dataset\\6400\\monkey_idx_6400_vocab.bin";
+			String trainPath = "H:\\transformer_dataset\\monkey_idx_6400_all_vocab.bin";
 			
 //			String trainPath = "H:\\model\\pretrain_data_6400.bin";
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
@@ -1057,7 +1057,7 @@ public class Llama3Test {
 			
 //			llama3_dp();
 			
-//			llama3_monkey();
+			llama3_monkey();
 
 //			llama3_monkey_chatglm();
 			
@@ -1067,7 +1067,7 @@ public class Llama3Test {
 			
 //			llama3_monkey_med_sft();
 			
-			llama3_monkey_med_predict();
+//			llama3_monkey_med_predict();
 			
 //			llama3_monkey_sql_sft();
 			

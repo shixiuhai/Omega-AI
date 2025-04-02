@@ -160,7 +160,7 @@ public class DeepSeekTest {
 			int decoderNum = 16;
 			int vocabSize = 6400;
 
-			int batchSize = 16;
+			int batchSize = 64;
 			float lr = 5e-4f;
 
 			String trainPath = "/omega/dataset/sft_512_6400.bin";
@@ -240,7 +240,7 @@ public class DeepSeekTest {
 			int batchSize = 128;
 			int max_len = 1024;
 
-			String trainPath = "H:\\transformer_dataset\\sft_"+max_len+"_6400.bin";
+			String trainPath = "H:\\transformer_dataset\\sft_"+max_len+"_6400_2.bin";
 			String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
 			String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
 
@@ -248,68 +248,69 @@ public class DeepSeekTest {
 
 			SFTBinDataset trainData = new SFTBinDataset(trainPath, max_len, batchSize, tokenizer, BinDataType.unint16);
 			
-			Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
-
-			float[] tmpInput = new float[batchSize * max_len];
-
-			Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
-
-			float[] tmpLabel = new float[batchSize * max_len];
-
-			int[] padCount = new int[] {0};
+//			Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
+//
+//			float[] tmpInput = new float[batchSize * max_len];
+//
+//			Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
+//
+//			float[] tmpLabel = new float[batchSize * max_len];
+//
+//			int[] padCount = new int[] {0};
 			
-			for(int i = 0;i<130000;i++) {
-				trainData.loadData(input, label, tmpInput, tmpLabel, padCount, i);
-				System.err.println(i);
+//			for(int i = 0;i<400000;i++) {
+//				trainData.loadData(input, label, tmpInput, tmpLabel, padCount, i);
+//				System.err.println(i);
+//			}
+
+			int[] rankIds = new int[] {0, 1, 2, 3};
+
+			ParallelDataLoader pdl = new ParallelDataLoader(trainData, rankIds);
+
+			ExecutorService executorService = Executors.newFixedThreadPool(rankIds.length);
+
+			for(int rankId:rankIds) {
+
+				ThreadDataset td = pdl.getDataloaders().get(rankId);
+				Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
+
+				float[] tmpInput = new float[batchSize * max_len];
+
+				Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
+
+				float[] tmpLabel = new float[batchSize * max_len];
+
+				int[] padCount = new int[] {0};
+				executorService.execute(new Runnable() {
+
+					@Override
+					public void run() {
+						// TODO Auto-generated method stub
+
+						try {
+
+							td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
+
+							for(int i = 0;i<10000;i++) {
+								System.out.println(rankId+":"+i);
+								td.loadData(input, label, tmpInput, tmpLabel, padCount, i);
+							}
+
+//							System.out.println(JsonUtils.toJson(tmpInput));
+//
+//							input.showDM();
+
+						} catch (Exception e) {
+							// TODO: handle exception
+							e.printStackTrace();
+						}
+
+					}
+				});
+
 			}
 
-//			int[] rankIds = new int[] {0, 1, 2, 3};
-//
-//			ParallelDataLoader pdl = new ParallelDataLoader(trainData, rankIds);
-//
-//			ExecutorService executorService = Executors.newFixedThreadPool(rankIds.length);
-//
-//			for(int rankId:rankIds) {
-//
-//				ThreadDataset td = pdl.getDataloaders().get(rankId);
-//				Tensor input = new Tensor(batchSize * max_len, 1, 1, 1, true);
-//
-//				float[] tmpInput = new float[batchSize * max_len];
-//
-//				Tensor label = new Tensor(batchSize , 1, 1, max_len, true);
-//
-//				float[] tmpLabel = new float[batchSize * max_len];
-//
-//				int[] padCount = new int[] {0};
-//				executorService.execute(new Runnable() {
-//
-//					@Override
-//					public void run() {
-//						// TODO Auto-generated method stub
-//
-//						try {
-//
-//							td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
-//
-//							for(int i = 0;i<100;i++) {
-//								td.loadData(input, label, tmpInput, tmpLabel, padCount, 0);
-//							}
-//
-////							System.out.println(JsonUtils.toJson(tmpInput));
-////
-////							input.showDM();
-//
-//						} catch (Exception e) {
-//							// TODO: handle exception
-//							e.printStackTrace();
-//						}
-//
-//					}
-//				});
-//
-//			}
-//
-//			executorService.shutdown();
+			executorService.shutdown();
 
 		} catch (Exception e) {
 			// TODO: handle exception

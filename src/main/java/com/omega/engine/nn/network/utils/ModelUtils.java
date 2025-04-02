@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.stream.IntStream;
 
 import com.omega.common.data.Tensor;
 
@@ -92,6 +93,11 @@ public class ModelUtils {
 				System.err.println(v);
 			}
 		}
+	}
+	
+	public static void readShort2Int(RandomAccessFile inputStream,int[] data,short[] shortArray) throws IOException {
+		readShortArray(inputStream, shortArray);
+		IntStream.range(0, shortArray.length).forEach(i -> data[i] = (int) shortArray[i]);
 	}
 
 	public static void readShort2IntLine(RandomAccessFile inputStream,int[] data) throws IOException {
@@ -193,6 +199,18 @@ public class ModelUtils {
 	    byte[] buffer = new byte[Sizeof.SHORT];
 	    inputStream.readFully(buffer);
 	    return b2s(buffer);
+	}
+	
+	/**
+	 * unint16
+	 * @param inputStream
+	 * @return
+	 * @throws IOException
+	 */
+	public static void readShortArray(RandomAccessFile inputStream,short[] cache) throws IOException {
+	    byte[] buffer = new byte[Sizeof.SHORT * cache.length];
+	    inputStream.readFully(buffer);
+	    convertByteArrayToShortArray(buffer, cache);
 	}
 	
 	/**
@@ -323,6 +341,12 @@ public class ModelUtils {
 		ByteBuffer byteBuffer2 = ByteBuffer.allocate(2);
 		byteBuffer2.put(b);
 		return byteBuffer2.getShort(0);
+	}
+	
+	public static void convertByteArrayToShortArray(byte[] byteArray, short[] shortArray) {
+	    ByteBuffer buffer = ByteBuffer.wrap(byteArray);
+	    buffer.order(ByteOrder.BIG_ENDIAN); // 根据需要选择字节序，这里选择大端模式
+	    buffer.asShortBuffer().get(shortArray); // 直接从buffer读取到short数组
 	}
 	
 	public static byte[] short2byte(short s){
