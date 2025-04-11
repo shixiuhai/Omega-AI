@@ -1,5 +1,1 @@
-package com.omega.example.transformer.utils;
-
-public abstract class BaseTokenizer {
-
-}
+package com.omega.example.transformer.utils;public abstract class BaseTokenizer {}

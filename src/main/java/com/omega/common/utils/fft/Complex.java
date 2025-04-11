@@ -1,109 +1,115 @@
 package com.omega.common.utils.fft;
 
 public class Complex {
-	
-	private final double re;   // the real part
-    private final double im;   // the imaginary part
+    public float _r, _i;
 
-    // create a new object with the given real and imaginary parts
-    public Complex(double real, double imag) {
-        re = real;
-        im = imag;
+    public Complex() {
+        reset();
     }
 
-	    public Complex(Complex a){
-	        re=a.re();
-	        im=a.im();
-	    }
-    // return a string representation of the invoking Complex object
-    public String toString() {
-        if (im == 0) return re + "";
-        if (re == 0) return im + "j";
-        if (im <  0) return re + " - " + (-im) + "j";
-        return re + " + " + im + "j";
+    public Complex(float r) {
+        set(r, 0.0f);
     }
 
-    // return abs/modulus/magnitude and angle/phase/argument
-    public double abs()   { return Math.hypot(re, im); }  // Math.sqrt(re*re + im*im)
-    public double phase() { return Math.atan2(im, re); }  // between -pi and pi
-
-    // return a new Complex object whose value is (this + b)
-    public Complex plus(Complex b) {
-        Complex a = this;             // invoking object
-        double real = a.re + b.re;
-        double imag = a.im + b.im;
-        return new Complex(real, imag);
+    public Complex(float r, float i) {
+        set(r, i);
     }
 
-    // return a new Complex object whose value is (this - b)
-    public Complex minus(Complex b) {
-        Complex a = this;
-        double real = a.re - b.re;
-        double imag = a.im - b.im;
-        return new Complex(real, imag);
+    public Complex(Complex c) {
+        set(c);
     }
 
-    // return a new Complex object whose value is (this * b)
-    public Complex times(Complex b) {
-        Complex a = this;
-        double real = a.re * b.re - a.im * b.im;
-        double imag = a.re * b.im + a.im * b.re;
-        return new Complex(real, imag);
+    public void set(float r, float i) {
+        _r = r;
+        _i = i;
     }
 
-    // scalar multiplication
-    // return a new object whose value is (this * alpha)
-    public Complex times(double alpha) {
-        return new Complex(alpha * re, alpha * im);
+    public void set(Complex c) {
+        _r = c._r;
+        _i = c._i;
     }
 
-    // return a new Complex object whose value is the conjugate of this
-    public Complex conjugate() {  return new Complex(re, -im); }
-
-    // return a new Complex object whose value is the reciprocal of this
-    public Complex reciprocal() {
-        double scale = re*re + im*im;
-        return new Complex(re / scale, -im / scale);
+    public void reset() {
+        _r = 0.0f;
+        _i = 0.0f;
     }
 
-    // return the real or imaginary part
-    public double re() { return re; }
-    public double im() { return im; }
-
-    // return a / b
-    public Complex divides(Complex b) {
-        Complex a = this;
-        return a.times(b.reciprocal());
+    public float real() {
+        return _r;
     }
 
-    // return a new Complex object whose value is the complex exponential of this
+    public float imag() {
+        return _i;
+    }
+
+    public Complex copy() {
+        return new Complex(_r, _i);
+    }
+
+    public Complex add(float a) {
+        return new Complex(_r + a, _i + a);
+    }
+
+    public Complex add(Complex a) {
+        return new Complex(_r + a._r, _i + a._i);
+    }
+
+    public Complex sub(float a) {
+        return new Complex(_r - a, _i - a);
+    }
+
+    public Complex sub(Complex a) {
+        return new Complex(_r - a._r, _i - a._i);
+    }
+
+    public Complex mul(float a) {
+        return new Complex(a * _r, a * _i);
+    }
+
+    public Complex mul(Complex a) {
+        return new Complex(_r * a._r - _i * a._i, _i * a._r + _r * a._i);
+    }
+
+    public Complex div(float a) {
+        return new Complex(_r / a, _i / a);
+    }
+
+    public Complex div(Complex a) {
+        if (Math.abs(a._r) > Math.abs(a._i)) {
+            float s = a._i / a._r;
+            float d = 1.0f / (a._r + s * a._i);
+            return new Complex(d * (_r + s * _i), d * (_i - s * _r));
+        }
+        float s = a._r / a._i;
+        float d = 1.0f / (a._i + s * a._r);
+        return new Complex(d * (s * _r + _i), d * (s * _i - _r));
+    }
+
+    public Complex conj() {
+        return new Complex(_r, -_i);
+    }
+
+    public float abs() {
+        if (_r == 0)
+            return Math.abs(_i);
+        if (_i == 0)
+            return Math.abs(_r);
+        float ar = Math.abs(_r);
+        float ai = Math.abs(_i);
+        if (ar > ai) {
+            float t = ai / ar;
+            return (ar * (float) Math.sqrt(1.0f + t * t));
+        }
+        float t = ar / ai;
+        return (ai * (float) Math.sqrt(1.0f + t * t));
+    }
+
     public Complex exp() {
-        return new Complex(Math.exp(re) * Math.cos(im), Math.exp(re) * Math.sin(im));
+        float a = (float) Math.exp(_r);
+        return new Complex((float) (a * Math.cos(_i)), (float) (a * Math.sin(_i)));
     }
 
-    // return a new Complex object whose value is the complex sine of this
-    public Complex sin() {
-        return new Complex(Math.sin(re) * Math.cosh(im), Math.cos(re) * Math.sinh(im));
+    public float norm() {
+        return (_r * _r + _i * _i);
     }
-
-    // return a new Complex object whose value is the complex cosine of this
-    public Complex cos() {
-        return new Complex(Math.cos(re) * Math.cosh(im), -Math.sin(re) * Math.sinh(im));
-    }
-
-    // return a new Complex object whose value is the complex tangent of this
-    public Complex tan() {
-        return sin().divides(cos());
-    }
-
-
-
-    // a static version of plus
-    public static Complex plus(Complex a, Complex b) {
-        double real = a.re + b.re;
-        double imag = a.im + b.im;
-        Complex sum = new Complex(real, imag);
-        return sum;
-    }
-	
 }

@@ -1,7 +1,1 @@
-package com.omega.common.task;
-
-public enum Operate {
-	
-	ConvnVail,ConvnVailBack
-	
-}
+package com.omega.common.task;public enum Operate {    ConvnVail, ConvnVailBack}
