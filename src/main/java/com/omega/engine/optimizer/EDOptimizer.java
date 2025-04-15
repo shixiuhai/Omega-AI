@@ -2937,8 +2937,8 @@ public class EDOptimizer extends Optimizer {
             Tensor labelLen = new Tensor(batchSize, 1, 1, 1, true);
             Tensor label = new Tensor(batchSize, 1, 1, trainingData.getMaxContextLen(), true);
             int[] count = new int[1];
-            // int pad = -1;
-            int pad = trainingData.tokenizer.pad();
+             int pad = -1;
+//            int pad = trainingData.tokenizer.pad();
             Tensor output = null;
             for (int i = 0; i < this.trainTime; i++) {
                 if (this.trainIndex >= this.minTrainTime) {

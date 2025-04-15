@@ -186,13 +186,13 @@ public class ASRTest {
 	}
 
 	public static void asr_train() throws Exception {
-		boolean bias = true;
+		boolean bias = false;
 		boolean dropout = false;
-		int batchSize = 12;
-		int maxWavLength = 256;
-		int maxContextLen = 64;
+		int batchSize = 4;
+		int maxWavLength = 512;
+		int maxContextLen = 32;
 		int numBins = 80;
-		int wavDim = 256;
+		int wavDim = 512;
 		int headNum = 8;
 		int n_layers = 8;
 		int nChannel = 2048;
@@ -326,8 +326,8 @@ public class ASRTest {
 	public static void main(String[] args) {
 		try {
 			// testASR();
-//            asr_train();
-			asr_predict();
+            asr_train();
+//			asr_predict();
 		} catch (Exception e) {
 			// TODO: handle exception
 			e.printStackTrace();

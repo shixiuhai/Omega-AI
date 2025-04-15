@@ -125,7 +125,7 @@ public class AudioDataset extends BaseDataLoader {
     public void loadData(int[] indexs, Tensor input, Tensor inputLen, Tensor labelInput, Tensor labelLen, Tensor label, int[] count) {
         // TODO Auto-generated method stub
         WAVFBankLoader.load(wavDirPath, idxSet, indexs, batchSize, input, inputLen, getNumBins(), getMaxWavLength());
-        loadLabels(indexs, labelInput, labelLen);
+        loadLabels(indexs, labelInput, labelLen, label);
         count[0] = (int) MatrixUtils.sum(labelLen.data);
         /**
          * copy data to gpu.
@@ -135,7 +135,7 @@ public class AudioDataset extends BaseDataLoader {
         labelInput.hostToDevice();
         inputLen.hostToDevice();
         labelLen.hostToDevice();
-        labelInput.copyGPU(label);
+        label.hostToDevice();
     }
 
     @Override
@@ -165,7 +165,7 @@ public class AudioDataset extends BaseDataLoader {
             }
         }
     }
-
+    
     public void loadLabels(int[] indexs, Tensor label, Tensor labelLen) {
         for (int i = 0; i < indexs.length; i++) {
             int idx = indexs[i];
@@ -180,6 +180,23 @@ public class AudioDataset extends BaseDataLoader {
             }
         }
     }
+    
+	public void loadLabels(int[] indexs, Tensor labelInput, Tensor labelLen, Tensor label) {
+		for (int i = 0; i < indexs.length; i++) {
+			int idx = indexs[i];
+			String text = tokenizer.sos_str() + datas.get(idx).get("text").toString() + tokenizer.eos_str();
+			int[] ids = tokenizer.encodeInt(text, getMaxContextLen() + 1);
+			for (int j = 0; j < getMaxContextLen(); j++) {
+				float current = ids[j];
+				float next = ids[j + 1];
+				labelInput.data[i * getMaxContextLen() + j] = current;
+				label.data[i * getMaxContextLen() + j] = next;
+				if (current == tokenizer.eos()) {
+					labelLen.data[i] = j + 1;
+				}
+			}
+		}
+	}
 
     public void loadLabels(int[] indexs, Tensor label, String[] labels) {
         for (int i = 0; i < indexs.length; i++) {

@@ -180,7 +180,7 @@ public class GPUOP {
     }
 
     public void init() {
-        cublasCreate(getHandle());
+    	checkCUBLASResult(cublasCreate(getHandle()));
     }
 
     public void clear() {

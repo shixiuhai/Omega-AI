@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 public class BatchTokenizerUtils {
+	
     public static void encodeDeepSeekDatasetBPE(String dataPath, String outputPath, String vocabPath, String mergesPath, int maxLen) {
         try {
             File file = new File(outputPath);
@@ -634,18 +635,18 @@ public class BatchTokenizerUtils {
         //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.bin";
         //
         //		txt2bin(txtPath, outputPath, 1, 2);
-        int maxLen = 512;
-        String dataPath = "E:\\dataset\\sft_512.jsonl";
-        String outputPath = "E:\\dataset\\sft_512_6400.txt";
-        String vocabPath = "E:\\dataset\\6400_tokenizer\\vocab.json";
-        String mergesPath = "E:\\dataset\\6400_tokenizer\\merges.txt";
-        encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
-        //		String txtPath = "E:\\dataset\\sft_1024_6400.txt";
-        //		String outputPath = "E:\\dataset\\sft_1024_6400.bin";
-        //
-        //		txt2bin(txtPath, outputPath, BinDataType.unint16, maxLen);
-        //		String dataPath = "H:\\transformer_dataset\\pretrain_hq.jsonl";
-        //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
+        int maxLen = 1024;
+//        String dataPath = "I:\\dataset\\r1_mix_1024.jsonl";
+//        String outputPath = "I:\\dataset\\r1_mix_1024.txt";
+//        String vocabPath = "H:\\transformer_dataset\\6400\\6400_tokenizer\\vocab.json";
+//        String mergesPath = "H:\\transformer_dataset\\6400\\6400_tokenizer\\merges.txt";
+//        encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
+		String txtPath = "I:\\dataset\\r1_mix_1024.txt";
+		String outputPath = "H:\\transformer_dataset\\r1_mix_1024.bin";
+		
+		txt2bin(txtPath, outputPath, BinDataType.unint16, maxLen);
+//		String dataPath = "H:\\transformer_dataset\\pretrain_hq.jsonl";
+//		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
         //
         //		String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
         //		String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
