@@ -65,7 +65,10 @@ public class ImageLoaderJob extends RecursiveAction {
             String key = idxSet[indexs[i]];
             //			System.out.println(indexs[i]+":"+i+":"+key);
             float[] labelBoxs = this.orgLabelData.get(key);
-            String imagePath = path + "/" + key + "." + extName;
+            String imagePath = path + "/" + key;
+            if(!key.contains(extName)) {
+            	imagePath += "." + extName;
+            }
             //			MemeryBlock block = pool.getBlock(4096 * 4096 * 3);
             //			OMImage orig = ImageLoader.loadImage(imagePath, block.getData());
             OMImage orig = ImageLoader.loadImage(imagePath);
