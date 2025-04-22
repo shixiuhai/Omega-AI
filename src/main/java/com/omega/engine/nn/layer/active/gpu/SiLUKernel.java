@@ -154,7 +154,6 @@ public class SiLUKernel extends BaseKernel {
             /**
              * 设置入参
              * float* data_im,float* data_col,int n,int height,int width,int kh,int kw,int s,int p,int oh,int ow
-
              */
             backwardKernelParameters = Pointer.to(Pointer.to(input.getGpuData()), Pointer.to(output.getGpuData()), Pointer.to(delta.getGpuData()), Pointer.to(diff.getGpuData()), Pointer.to(new int[]{output.dataLength}));
             //			}

@@ -1,37 +1,54 @@
-package com.omega.engine.nn.layer;
+package com.omega.engine.nn.layer.causalvae;
+
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import com.omega.common.data.Tensor;
 import com.omega.common.utils.MatrixUtils;
 import com.omega.common.utils.RandomUtils;
 import com.omega.engine.active.ActiveType;
-import com.omega.engine.gpu.cudnn.ConvCudnnKernel;
+import com.omega.engine.gpu.PaddingKernel;
+import com.omega.engine.gpu.cudnn.Conv3DCudnnKernel;
+import com.omega.engine.nn.layer.Layer;
+import com.omega.engine.nn.layer.LayerType;
+import com.omega.engine.nn.layer.ParamsInit;
 import com.omega.engine.nn.layer.gpu.BiasKernel;
-import com.omega.engine.nn.layer.gpu.ConvBaseKernel;
-import com.omega.engine.nn.layer.gpu.ConvKernel;
-import com.omega.engine.nn.model.ConvLayerInit;
+import com.omega.engine.nn.layer.gpu.Conv3DBaseKernel;
 import com.omega.engine.nn.model.LayerInit;
 import com.omega.engine.nn.network.CNN;
 import com.omega.engine.nn.network.Network;
 import com.omega.engine.nn.network.utils.ModelUtils;
 import com.omega.engine.updater.UpdaterFactory;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
-
 /**
  * ConvolutionLayer
  *
  * @author Administrator
  */
-public class ConvolutionLayer extends Layer {
+public class CausalConv3DLayer extends Layer {
+    public int depth = 0;
     public int kernelNum = 0;
+    public int kDepth = 0;
     public int kWidth = 0;
     public int kHeight = 0;
     public int stride = 1;
-    public int padding = 0;
-    private ConvBaseKernel kernel;
+    public int oDepth = 0;
+    private Conv3DBaseKernel kernel;
     private BiasKernel biasKernel;
-
+    private PaddingKernel paddingKernel;
+    
+    private boolean causalPadding = true;
+    
+    private int pDepth;
+    private int pHeight;
+    private int pWidth;
+    
+    private Tensor pOutput;
+    
+    private Tensor pDiff;
+    
+    private int[] padding3d = new int[]{1, 1, 1, 1, 2, 0};
+    
     /**
      * ConvolutionLayer
      *
@@ -46,15 +63,17 @@ public class ConvolutionLayer extends Layer {
      * @param activeFunction
      * @param updater
      */
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
+        this.causalPadding = causalPadding;
         this.hasParams = true;
         this.initParam();
     }
@@ -73,16 +92,18 @@ public class ConvolutionLayer extends Layer {
      * @param activeFunction
      * @param updater
      */
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride, boolean hasBias) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding, boolean hasBias) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
         this.hasBias = hasBias;
+        this.causalPadding = causalPadding;
         this.hasParams = true;
         this.initParam();
     }
@@ -101,15 +122,17 @@ public class ConvolutionLayer extends Layer {
      * @param activeFunction
      * @param updater
      */
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride, boolean hasBias, Network network) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding, boolean hasBias, Network network) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
+        this.causalPadding = causalPadding;
         this.hasBias = hasBias;
         this.network = network;
         //		network.paramLayers.add(this);
@@ -132,15 +155,17 @@ public class ConvolutionLayer extends Layer {
      * @param activeFunction
      * @param updater
      */
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride, boolean hasBias, boolean freeze, Network network) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding, boolean hasBias, boolean freeze, Network network) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
+        this.causalPadding = causalPadding;
         this.hasBias = hasBias;
         this.network = network;
         this.freeze = freeze;
@@ -150,30 +175,34 @@ public class ConvolutionLayer extends Layer {
         this.initParam();
     }
 
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride, boolean hasBias, ParamsInit paramsInit) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding, boolean hasBias, ParamsInit paramsInit) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
+        this.causalPadding = causalPadding;
         this.hasBias = hasBias;
         this.hasParams = true;
         this.paramsInit = paramsInit;
         this.initParam();
     }
 
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride, boolean hasBias, Network network, ParamsInit paramsInit) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding, boolean hasBias, Network network, ParamsInit paramsInit) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
+        this.causalPadding = causalPadding;
         this.hasBias = hasBias;
         this.network = network;
         //		network.paramLayers.add(this);
@@ -182,15 +211,17 @@ public class ConvolutionLayer extends Layer {
         this.initParam();
     }
 
-    public ConvolutionLayer(int channel, int kernelNum, int width, int height, int kWidth, int kHeight, int padding, int stride, boolean hasBias, Network network, ActiveType activeType) {
+    public CausalConv3DLayer(int channel, int kernelNum, int depth, int width, int height, int kDepth, int kWidth, int kHeight, int stride, boolean causalPadding, boolean hasBias, Network network, ActiveType activeType) {
         this.kernelNum = kernelNum;
         this.channel = channel;
+        this.depth = depth;
         this.width = width;
         this.height = height;
+        this.kDepth = kDepth;
         this.kWidth = kWidth;
         this.kHeight = kHeight;
-        this.padding = padding;
         this.stride = stride;
+        this.causalPadding = causalPadding;
         this.hasBias = hasBias;
         this.network = network;
         //		network.paramLayers.add(this);
@@ -218,36 +249,37 @@ public class ConvolutionLayer extends Layer {
     }
 
     public static void main(String[] args) {
-        int N = 5;
-        int T = 10;
-        int E = 8;
-        int NC = 4;
-        float[] data = RandomUtils.order(N * T * E, 0.1f, 0.1f);
-        Tensor input = new Tensor(N, T, 1, E, data, true);
-        Tensor it = new Tensor(N, E, 1, T, true);
-        float[] delta_data = MatrixUtils.val(N * NC * T, 1.0f);
-        Tensor delta = new Tensor(N, NC, 1, T, delta_data, true);
+        int N = 4;
+        int C = 3;
+        int F = 8;
+        int H = 4;
+        int W = 4;
+        
+        int KC = 4;
+        int KF = 3;
+        int KH = 3;
+        int KW = 3;
+
+        int stride = 1;
+        float[] data = RandomUtils.order(N * C * F * H * W, 0.1f, 0.1f);
+        Tensor input = new Tensor(N, C * F, H, W, data, true);
         CNN nn = new CNN(null);
         nn.CUDNN = true;
         nn.number = N;
-        nn.tensorOP.permute(input, it, new int[]{0, 3, 2, 1});
-        input = it;
-        input.showDM();
-        ConvolutionLayer conv1 = new ConvolutionLayer(E, NC, T, 1, 1, 1, 0, 1, true, nn);
-        conv1.weight = new Tensor(NC, E, 1, 1, RandomUtils.order(NC * E, 0.1f, 0.1f), true);
-        conv1.bias = new Tensor(1, 1, 1, NC, RandomUtils.order(NC, 0.1f, 0.0f), true);
-        //		mal.forward(input);
+        //nt channel,int kernelNum,int depth,int width,int height,int kDepth,int kWidth,int kHeight,int padding,int stride
+        CausalConv3DLayer conv1 = new CausalConv3DLayer(C, KC, F, W, H, KF, KW, KH, stride, false, true, nn);
+
+        conv1.weight = new Tensor(KC, C * KF, KH, KW, RandomUtils.order(KC * C * KF * KH * KW, 0.1f, 0.1f), true);
+        conv1.bias = new Tensor(1, 1, 1, KC, RandomUtils.order(KC, 0.1f, 0.1f), true);
         conv1.forward(input);
-        //		input.showDM();
-        //		mal.getWeights().showDM();
+        float[] delta_data = MatrixUtils.val(conv1.getOutput().dataLength, 1.0f);
+        Tensor delta = new Tensor(N, conv1.oChannel * conv1.oDepth, conv1.oHeight, conv1.oWidth, delta_data, true);
+        conv1.back(delta);
         conv1.getOutput().showShape();
         conv1.getOutput().showDM();
-        conv1.back(delta);
         conv1.diff.showDM();
-        Tensor difft = new Tensor(N, T, 1, E, true);
-        nn.tensorOP.permute(conv1.diff, difft, new int[]{0, 3, 2, 1});
-        conv1.diff = difft;
-        conv1.diff.showDM();
+        conv1.diffW.showDM();
+        conv1.diffB.showDM();
     }
 
     @Override
@@ -255,10 +287,21 @@ public class ConvolutionLayer extends Layer {
         // TODO Auto-generated method stub
         int dataLength = kernelNum * channel * kHeight * kWidth;
         this.oChannel = this.kernelNum;
-        this.oWidth = (this.width + this.padding * 2 - kWidth) / this.stride + 1;
-        this.oHeight = (this.height + this.padding * 2 - kHeight) / this.stride + 1;
+        int padding = 1;
+        if(this.causalPadding) {
+        	this.padding3d = new int[] {padding, padding, padding, padding, 2 * padding, 0};	
+        }else {
+        	int ps = kWidth / 2;
+        	this.padding3d = new int[] {ps, ps, ps, ps, ps, ps};
+        }
+        this.pDepth = this.depth + padding3d[4] + padding3d[5];
+        this.pHeight = this.height + padding3d[2] + padding3d[3];
+        this.pWidth = this.width + padding3d[0] + padding3d[1];
+        this.oDepth = (this.pDepth - kDepth) / this.stride + 1;
+        this.oWidth = (this.pWidth - kWidth) / this.stride + 1;
+        this.oHeight = (this.pHeight - kHeight) / this.stride + 1;
         //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierUniform(dataLength, channel, kernelNum, 1.0f), true);
-        this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_uniform(dataLength, this.channel * kHeight * kWidth, this.paramsInit), true);
+        this.weight = new Tensor(kernelNum, channel * kDepth, kHeight, kWidth, RandomUtils.kaiming_uniform(dataLength, this.channel * kDepth * kHeight * kWidth, this.paramsInit), true);
         //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaiming_normal(dataLength, this.oChannel * this.oHeight * this.oWidth, this.paramsInit), true);
         //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.xavierReluRandom(kernelNum * channel * kHeight * kWidth, this.channel * this.height * this.width, this.oChannel * this.oHeight * this.oWidth), true);
         //		this.weight = new Tensor(kernelNum, channel, kHeight, kWidth, RandomUtils.kaimingNormalRandom(kernelNum * channel * kHeight * kWidth, 0, kernelNum * kHeight * kWidth), true);
@@ -271,43 +314,52 @@ public class ConvolutionLayer extends Layer {
         if (hasBias) {
             this.bias = new Tensor(1, 1, 1, kernelNum, true);
         }
+
     }
 
     @Override
     public void init() {
         // TODO Auto-generated method stub
         this.number = this.network.number;
-        if (this.output == null || this.number != this.output.number) {
-            //			this.output = new Tensor(number, oChannel, oHeight, oWidth, true);
-            this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
-        }
         if (kernel == null) {
             if (this.network.CUDNN) {
-                kernel = new ConvCudnnKernel(this.network, channel, height, width, kernelNum, kHeight, kWidth, stride, padding, cuda());
+                kernel = new Conv3DCudnnKernel(this.network, channel, pDepth, pHeight, pWidth, kernelNum, kDepth, kHeight, kWidth, stride, 0, cuda());
             } else {
-                kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding, cuda());
+                //				kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding, cuda());
             }
             if (this.hasBias) {
                 biasKernel = new BiasKernel(cuda());
             }
+            paddingKernel = new PaddingKernel(cuda());
         }
+        if(this.pOutput == null || this.number != this.pOutput.number) {
+        	this.pOutput = paddingKernel.createOutput(number, channel, height, width, depth, padding3d);
+        }
+        if (this.output == null || this.number != this.output.number) {
+            this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
+        }
+        
     }
 
     public void init(Tensor input) {
         // TODO Auto-generated method stub
         this.number = input.number;
-        if (this.output == null || this.number != this.output.number) {
-            this.output = Tensor.createTensor(this.output, number, oChannel, oHeight, oWidth, true);
-        }
         if (kernel == null) {
             if (this.network.CUDNN) {
-                kernel = new ConvCudnnKernel(this.network, channel, height, width, kernelNum, kHeight, kWidth, stride, padding, cuda());
+            	 kernel = new Conv3DCudnnKernel(this.network, channel, pDepth, pHeight, pWidth, kernelNum, kDepth, kHeight, kWidth, stride, 0, cuda());
             } else {
-                kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding, cuda());
+                //				kernel = new ConvKernel(channel, height, width, kernelNum, kHeight, kWidth, stride, padding, cuda());
             }
             if (this.hasBias) {
                 biasKernel = new BiasKernel(cuda());
             }
+            paddingKernel = new PaddingKernel(cuda());
+        }
+        if(this.pOutput == null || this.number != this.pOutput.number) {
+        	this.pOutput = paddingKernel.createOutput(input, depth, padding3d);
+        }
+        if (this.output == null || this.number != this.output.number) {
+            this.output = Tensor.createTensor(this.output, number, oChannel * oDepth, oHeight, oWidth, true);
         }
     }
 
@@ -315,35 +367,28 @@ public class ConvolutionLayer extends Layer {
     public void initBack() {
         // TODO Auto-generated method stub
         if (this.diff == null || this.number != this.diff.number) {
-            this.diff = new Tensor(number, channel, height, width, true);
-        }
-        if (this.diffW == null) {
-            if (!freeze) {
-                if (this.hasBias) {
-                    this.diffB = new Tensor(1, 1, 1, kernelNum, true);
+            this.diff = new Tensor(number, channel * depth, height, width, true);
+            if (this.diffW == null) {
+                if (!freeze) {
+                    if (this.hasBias) {
+                        this.diffB = new Tensor(1, 1, 1, kernelNum, true);
+                    }
+                    this.diffW = new Tensor(this.kernelNum, this.channel * kDepth, this.kHeight, this.kWidth, true);
                 }
-                this.diffW = new Tensor(this.kernelNum, this.channel, this.kHeight, this.kWidth, true);
             }
         }
-    }
-    
-    public void initBack(Tensor diff) {
-        // TODO Auto-generated method stub
-    	this.diff = diff;
-        if (this.diffW == null) {
-            if (!freeze) {
-                if (this.hasBias) {
-                    this.diffB = new Tensor(1, 1, 1, kernelNum, true);
-                }
-                this.diffW = new Tensor(this.kernelNum, this.channel, this.kHeight, this.kWidth, true);
-            }
+        if(this.pDiff == null || this.number != this.pDiff.number) {
+        	this.pDiff = new Tensor(number, channel * pDepth, pHeight, pWidth, true);
         }
     }
 
     @Override
     public void output() {
         // TODO Auto-generated method stub
-        kernel.conv(input, weight, output);
+    	
+    	paddingKernel.padding3d(input, pOutput, depth, padding3d, 0);
+    	
+        kernel.conv(pOutput, weight, output);
         if (this.hasBias) {
             biasKernel.addConvBiasFast(output, bias);
         }
@@ -374,13 +419,13 @@ public class ConvolutionLayer extends Layer {
              * im2col(input)T[oh * ow * C * kh * kw]
 
              */
-            kernel.dw(input, delta, diffW);
+            kernel.dw(pOutput, delta, diffW);
             /**
              * 计算deltaB
 
              */
             if (this.hasBias) {
-                biasKernel.backwardConvBias(diffB, delta);
+                biasKernel.backwardConv3DBias(oDepth, diffB, delta);
             }
         }
         //		System.out.println("===========");
@@ -397,7 +442,10 @@ public class ConvolutionLayer extends Layer {
              * diff[ko * oh * ow]
 
              */
-            kernel.dx(delta, weight, diff);
+            kernel.dx(delta, weight, pDiff);
+            
+            paddingKernel.padding3dGrad(pDiff, diff, depth, padding3d);
+            
             //			System.out.println(this.index+":"+diff.isZero()+":"+delta.isZero());
         }
         //		System.out.println("back:"+(System.nanoTime() - start) / 1e6 + "ms.");
@@ -418,7 +466,7 @@ public class ConvolutionLayer extends Layer {
              * im2col(input)T[oh * ow * C * kh * kw]
 
              */
-            kernel.dw(input, delta, diffW);
+            kernel.dw(pOutput, delta, diffW);
         }
         //		diffW.showDM();
         //		System.out.println("===========");
@@ -442,7 +490,10 @@ public class ConvolutionLayer extends Layer {
              * diff[ko * oh * ow]
 
              */
-            kernel.dx(delta, weight, diff);
+            kernel.dx(delta, weight, pDiff);
+            
+            paddingKernel.padding3dGrad(pDiff, diff, depth, padding3d);
+            
             //			System.out.println(this.index+":"+diff.isZero()+":"+delta.isZero());
         }
         //		System.out.println("back:"+(System.nanoTime() - start) / 1e6 + "ms.");
@@ -536,7 +587,7 @@ public class ConvolutionLayer extends Layer {
     @Override
     public LayerInit save() {
         // TODO Auto-generated method stub
-        return new ConvLayerInit(this);
+        return null;
     }
 
     @Override
@@ -611,7 +662,7 @@ public class ConvolutionLayer extends Layer {
 
     public void back(Tensor delta, Tensor diff) {
         // TODO Auto-generated method stub
-        this.initBack(diff);
+        this.initBack();
         /**
          * 设置梯度
 

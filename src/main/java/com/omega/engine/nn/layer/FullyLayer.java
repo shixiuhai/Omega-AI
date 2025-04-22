@@ -289,7 +289,6 @@ public class FullyLayer extends Layer {
          * number * w
          * number * ow
          * m = w,k = number,n = ow
-
          */
         //		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), dwStream));
         GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_T, cublasOperation.CUBLAS_OP_N, this.oWidth, this.width, this.number, 1, delta.getGpuData(), this.oWidth, input.getGpuData(), this.width, 0, diffW.getGpuData(), this.width);
@@ -300,7 +299,6 @@ public class FullyLayer extends Layer {
          * number * ow
          * w * ow
          * m = number,k = ow,n = w
-
          */
         //		GPUOP.checkCUBLASResult(JCublas2.cublasSetStream(GPU_OP().getHandle(), dxStream));
         GPU_OP().multiplyFloatEX(cublasOperation.CUBLAS_OP_N, cublasOperation.CUBLAS_OP_N, this.number, this.width, this.oWidth, 1, delta.getGpuData(), this.oWidth, weight.getGpuData(), this.width, 0, diff.getGpuData(), this.width);

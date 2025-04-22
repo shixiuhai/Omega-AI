@@ -135,7 +135,12 @@ public class TinyVQVAEDecoder2 extends Layer {
         Tensor d = convNormOut.diff;
         for (int i = up.size() - 1; i >= 0; i--) {
             Layer l = up.get(i);
-            l.back(d);
+            if(l instanceof ConvolutionLayer) {
+            	ConvolutionLayer conv = (ConvolutionLayer) l;
+            	conv.back(d, conv.input);
+            }else {
+            	l.back(d);
+            }
             d = l.diff;
         }
         convIn.back(d);

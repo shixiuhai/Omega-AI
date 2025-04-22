@@ -34,7 +34,7 @@ public class VQVAEResidual extends Layer {
     private ConvolutionLayer conv_shortcut;
     private boolean shortcut = false;
     private Tensor cache;
-
+    
     public VQVAEResidual(int channel, int oChannel, int height, int width, int group, Network network) {
         this.network = network;
         this.channel = channel;
@@ -80,6 +80,12 @@ public class VQVAEResidual extends Layer {
 
     @Override
     public void initBack() {
+//    	if (network.gradCacheMode) {
+////    		conv1.diff = network.cudaManager.getMemoryManager().getPrivateCaches("vqvae-resblock-conv1", conv1.input.number, conv1.input.channel, conv1.input.height, conv1.input.width);
+//            if(conv2.diff == null || !conv2.diff.checkShape(conv2.input)) {
+//            	conv2.diff = network.cudaManager.getMemoryManager().getPrivateCaches("vqvae-resblock-conv2", conv2.input.number, conv2.input.channel, conv2.input.height, conv2.input.width);
+//            }
+//    	}
     }
 
     @Override
@@ -137,10 +143,10 @@ public class VQVAEResidual extends Layer {
     public void diff() {
         // TODO Auto-generated method stub
         //		System.out.println(index);
-        conv2.back(delta);
+        conv2.back(delta, conv2.input);
         a2.back(conv2.diff);
         norm2.back(a2.diff);
-        conv1.back(norm2.diff);
+        conv1.back(norm2.diff, conv1.input);
         a1.back(conv1.diff);
         norm1.back(a1.diff);
         if (shortcut) {

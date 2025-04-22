@@ -166,7 +166,7 @@ public class GNLayer extends NormalizationLayer {
 
     public void init(Tensor input) {
         this.number = input.number;
-        if (this.bnType == null) {
+        if (this.output == null && this.bnType == null) {
             this.channel = input.channel;
             this.height = input.height;
             this.width = input.width;
@@ -175,14 +175,14 @@ public class GNLayer extends NormalizationLayer {
             this.oWidth = this.width;
             this.setBnType(BNType.fully_bn);
             this.numChannel = this.height * this.width;
-        } else {
+        } else if(this.output == null){
             this.channel = input.channel;
             this.height = input.height;
             this.width = input.width;
             this.oChannel = this.channel;
             this.oHeight = this.height;
             this.oWidth = this.width;
-            this.setBnType(BNType.conv_bn);
+            this.setBnType(bnType);
             this.numChannel = this.channel;
         }
         if (kernel == null) {

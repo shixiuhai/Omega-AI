@@ -621,7 +621,7 @@ public class BatchTokenizerUtils {
         //
         //		encodeMonkeyDatasetBySentencePiece2Bin(dataPath, binPath, tokenizerPath, BinDataType.unint32);
         //		String txtPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.txt";
-        //		String outputPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.bin";
+        //		String outputPath = "H:\\transformer_dataset\\wbm_idx_chatglm_vocab.bin";hunyuan vae train
         //
         //		pretrainTXT2Bin(txtPath, outputPath, tokenizerPath, BinDataType.unint32);
         //		String dataPath = "I:\\dataset\\sft_512.jsonl";
@@ -636,15 +636,16 @@ public class BatchTokenizerUtils {
         //
         //		txt2bin(txtPath, outputPath, 1, 2);
         int maxLen = 1024;
-//        String dataPath = "I:\\dataset\\r1_mix_1024.jsonl";
-//        String outputPath = "I:\\dataset\\r1_mix_1024.txt";
-//        String vocabPath = "H:\\transformer_dataset\\6400\\6400_tokenizer\\vocab.json";
-//        String mergesPath = "H:\\transformer_dataset\\6400\\6400_tokenizer\\merges.txt";
-//        encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
-		String txtPath = "I:\\dataset\\r1_mix_1024.txt";
-		String outputPath = "H:\\transformer_dataset\\r1_mix_1024.bin";
-		
-		txt2bin(txtPath, outputPath, BinDataType.unint16, maxLen);
+        String dataPath = "I:\\dataset\\r1_mix_1024.jsonl";
+        String outputPath = "I:\\dataset\\r1_mix_1024.txt";
+        String vocabPath = "H:\\transformer_dataset\\6400\\6400_tokenizer\\vocab.json";
+        String mergesPath = "H:\\transformer_dataset\\6400\\6400_tokenizer\\merges.txt";
+        encodeDeepSeekFullSTFDatasetBPE(dataPath, outputPath, vocabPath, mergesPath, maxLen);
+        
+//		String txtPath = "I:\\dataset\\r1_mix_1024.txt";
+//		String outputPath = "H:\\transformer_dataset\\r1_mix_1024.bin";		
+//		txt2bin(txtPath, outputPath, BinDataType.unint16, maxLen);
+        
 //		String dataPath = "H:\\transformer_dataset\\pretrain_hq.jsonl";
 //		String outputPath = "H:\\transformer_dataset\\pretrain_hq_6400.txt";
         //

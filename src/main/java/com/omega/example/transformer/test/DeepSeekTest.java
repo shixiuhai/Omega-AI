@@ -177,7 +177,66 @@ public class DeepSeekTest {
             e.printStackTrace();
         }
     }
-
+    
+    public static void omega_r1_predict() {
+        try {
+            boolean bias = false;
+            boolean dropout = false;
+            boolean flashAttention = false;
+            int max_len = 1024;
+            int embedDim = 512;
+            int headNum = 8;
+            int nKVHeadNum = 2;
+            int decoderNum = 16;
+            int vocabSize = 6400;
+            String vocabPath = "H:\\transformer_dataset\\6400\\vocab.json";
+            String mergesPath = "H:\\transformer_dataset\\6400\\merges.txt";
+            BPETokenizer3 tokenizer = new BPETokenizer3(vocabPath, mergesPath);
+            Llama3 network = new Llama3(LossType.softmax_with_cross_entropy_idx, UpdaterType.adamw, headNum, nKVHeadNum, decoderNum, vocabSize, max_len, embedDim, bias, dropout, flashAttention);
+            String model_path = "H:\\model\\llama3-r1-1024.model";
+            ModelUtils.loadModel(network, model_path);
+            network.RUN_MODEL = RunModel.TEST;
+            Scanner scanner = new Scanner(System.in);
+            Tensor testInput = null;
+            while (true) {
+                System.out.println("请输入中文:");
+                String input_txt = scanner.nextLine();
+                if (input_txt.equals("exit")) {
+                    break;
+                }
+                input_txt = input_txt.toLowerCase();
+                String qaStr = tokenizer.sos_str() + "user\n" + input_txt + tokenizer.eos_str() + "\n";
+                //				System.out.println(qaStr);
+                int[] idx = tokenizer.encodeInt(qaStr);
+                int startLen = idx.length;
+                Tensor input = Llama3Test.loadByTxtToIdx(testInput, idx);
+                //				input.showDM();
+                Tensor[] pos = RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum);
+                for (int t = 0; t < max_len - startLen; t++) {
+                    network.time = input.number;
+                    Tensor cos = pos[0];
+                    Tensor sin = pos[1];
+                    Tensor output = network.forward(cos, sin, input);
+                    output.syncHost();
+                    int nextIDX = Llama3Test.output2NextIDXTopN(output, idx.length - 1, 25, network.cudaManager);
+                    idx = Arrays.copyOf(idx, idx.length + 1);
+                    idx[idx.length - 1] = nextIDX;
+                    if (nextIDX == tokenizer.eos) {
+                        break;
+                    }
+                    input = Llama3Test.loadByTxtToIdx(testInput, idx);
+                    RoPEKernel.getCosAndSin(input.number, network.embedDim, network.headNum, pos);
+                }
+                int[] awIdx = Arrays.copyOfRange(idx, startLen, idx.length);
+                System.out.println("chatbot:" + tokenizer.decode(awIdx).replaceAll("<s>assistant\n", ""));
+            }
+            scanner.close();
+        } catch (Exception e) {
+            // TODO: handle exception
+            e.printStackTrace();
+        }
+    }
+    
     public static void testBinData() {
         try {
             int batchSize = 128;
@@ -278,8 +337,9 @@ public class DeepSeekTest {
             //			train_full_sft();
             //			testBinData();
             //			dp_train_pretrain();
-            dp_train_full_sft();
+//            dp_train_full_sft();
             //			dp_train_1024_sft();
+            omega_r1_predict();           
         } catch (Exception e) {
             // TODO: handle exception
             e.printStackTrace();

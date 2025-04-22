@@ -136,21 +136,7 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer {
         tf.number = batchSize * time;
         tf.time = time;
         float[] data = RandomUtils.order(batchSize * time * embedDim, 0.1f, 0.1f);
-        //		int[] rts = new int[] {2, 3, 3};
-        //
-        //		for(int b = 0;b<batchSize;b++) {
-        //			int rt = rts[b];
-        //			for(int t = 0;t<time;t++) {
-        //				if(t > rt) {
-        //					for(int n = 0;n<embedDim;n++) {
-        //						data[b * time * embedDim + t * embedDim + n] = 0;
-        //					}
-        //				}
-        //			}
-        //		}
-        //		float[] maskData = new float[] {1,1,1,0,0,1,1,1,1,0,1,1,1,1,0};
-        //
-        //		Tensor mask = new Tensor(batchSize, 1, time, time, maskData, true);
+
         Tensor input = new Tensor(batchSize * time, 1, 1, embedDim, data, true);
         //		input.showDM();
         float[] delta_data = MatrixUtils.val(batchSize * time * embedDim, 1.0f);
@@ -271,21 +257,22 @@ public class LlamaCausalSelfAttention2Layer extends LlamaAttentionLayer {
     @Override
     public void initBack() {
         // TODO Auto-generated method stub
-        if (this.dattn == null) {
-            if (network.gradCacheMode) {
-                this.dqt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dqt", batchSize, headNum, time, dk);
+    	if (network.gradCacheMode) {
+        	if(dqt == null || !dqt.checkShape(qt)) {
+        		this.dqt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dqt", batchSize, headNum, time, dk);
                 this.dkt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dkt", batchSize, headNum, time, dk);
                 this.dvt = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dvt", batchSize, headNum, time, dk);
                 this.dattn = network.cudaManager.getMemoryManager().getPrivateCaches("attn-dattn", batchSize, headNum, time, time);
-            } else {
+        	}
+        } else {
+        	if (this.dattn == null) {
                 this.dqt = Tensor.createGPUTensor(this.dqt, batchSize, headNum, time, dk, true);
                 this.dkt = Tensor.createGPUTensor(this.dkt, batchSize, headNum, time, dk, true);
                 this.dvt = Tensor.createGPUTensor(this.dvt, batchSize, headNum, time, dk, true);
                 this.dattn = Tensor.createGPUTensor(this.dattn, batchSize, headNum, time, time, true);
-            }
-        } else {
-            //			this.dvaccum.clearGPU();
+        	}
         }
+
     }
 
     @Override

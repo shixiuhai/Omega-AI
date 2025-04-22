@@ -173,7 +173,6 @@ public class TinyVAE2 extends Network {
         /**
          * 设置误差
          * 将误差值输入到最后一层
-
          */
         this.setLossDiff(lossDiff);  //only decoder delta
         initBack();

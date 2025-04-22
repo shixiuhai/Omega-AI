@@ -3312,7 +3312,7 @@ public class MBSGDOptimizer extends Optimizer {
                     System.out.println("ploss:" + ploss);
                     this.currentError = loss + perceptual_weight * ploss;
                     train_loss += this.currentError;
-                    String msg = "training[" + this.trainIndex + "]{" + it + "} (lr:" + this.network.learnRate + ") train_loss:" + this.currentError + " [costTime:" + (System.nanoTime() - start) / 1e6 + "ms.]";
+                    String msg = "training[" + this.trainIndex + "]{" + it + "/" + indexs.length + "} (lr:" + this.network.learnRate + ") train_loss:" + this.currentError + " [costTime:" + (System.nanoTime() - start) / 1e6 + "ms.]";
                     System.out.println(msg);
                     this.batchIndex++;
                     /**

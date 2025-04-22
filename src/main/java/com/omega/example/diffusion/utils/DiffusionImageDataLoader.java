@@ -30,6 +30,8 @@ public class DiffusionImageDataLoader extends BaseDataLoader {
     private int img_h;
     private String extName;
     private boolean horizontalFilp;
+    
+    private int maxNumber = 0;
 
     public DiffusionImageDataLoader(String imgDirPath, int img_w, int img_h, int batchSize, boolean horizontalFilp) {
         this.horizontalFilp = horizontalFilp;
@@ -62,7 +64,20 @@ public class DiffusionImageDataLoader extends BaseDataLoader {
         this.std = std;
         init();
     }
-
+    
+    public DiffusionImageDataLoader(String imgDirPath, int img_w, int img_h, int batchSize, boolean horizontalFilp, boolean sort, float[] mean, float[] std,int maxNumber) {
+        this.horizontalFilp = horizontalFilp;
+        this.sort = sort;
+        this.imgDirPath = imgDirPath;
+        this.img_w = img_w;
+        this.img_h = img_h;
+        this.batchSize = batchSize;
+        this.mean = mean;
+        this.std = std;
+        this.maxNumber = maxNumber;
+        init();
+    }
+    
     public void init() {
         loadFileCount();
     }
@@ -72,7 +87,7 @@ public class DiffusionImageDataLoader extends BaseDataLoader {
             File file = new File(imgDirPath);
             if (file.exists() && file.isDirectory()) {
                 String[] filenames = file.list();
-                this.number = filenames.length;
+                this.number = maxNumber > 0 ? maxNumber: filenames.length;
                 this.idxSet = new String[number];
                 this.extName = filenames[0].split("\\.")[1];
                 for (int i = 0; i < number; i++) {

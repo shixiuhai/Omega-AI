@@ -136,7 +136,12 @@ public class TinyVQVAEEncoder2 extends Layer {
         Tensor d = convNormOut.diff;
         for (int i = down.size() - 1; i >= 0; i--) {
             Layer l = down.get(i);
-            l.back(d);
+            if(l instanceof ConvolutionLayer) {
+            	ConvolutionLayer conv = (ConvolutionLayer) l;
+            	conv.back(d, conv.input);
+            }else {
+            	l.back(d);
+            }
             d = l.diff;
         }
         //		d.showDM("d");

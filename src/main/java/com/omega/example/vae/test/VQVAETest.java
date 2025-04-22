@@ -541,6 +541,7 @@ public class VQVAETest {
             DiffusionImageDataLoader dataLoader = new DiffusionImageDataLoader(imgDirPath, imageSize, imageSize, batchSize, true, false, mean, std);
             VQVAE2 network = new VQVAE2(LossType.MSE, UpdaterType.adamw, z_dims, latendDim, num_vq_embeddings, imageSize, ch_mult, ch, num_res_blocks);
             network.CUDNN = true;
+            network.gradCacheMode=true;
             network.learnRate = 0.001f;
             LPIPS lpips = new LPIPS(LossType.MSE, UpdaterType.adamw, imageSize);
             String lpipsWeight = "H:\\model\\lpips.json";

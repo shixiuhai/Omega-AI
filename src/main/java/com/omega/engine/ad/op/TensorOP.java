@@ -554,6 +554,14 @@ public class TensorOP {
             //			c.data = MatrixOperation.add(a.data, b.data);
         }
     }
+    
+    public void permute(Tensor a, Tensor b, int[] xShape, int[] yShape, int[] permutes) {
+        if (a.isHasGPU()) {
+            op.permute_gpu(a, b, xShape, yShape, permutes);
+        } else {
+            //			c.data = MatrixOperation.add(a.data, b.data);
+        }
+    }
 
     public void expand(Tensor a, Tensor b, int num) {
         if (a.isHasGPU()) {
