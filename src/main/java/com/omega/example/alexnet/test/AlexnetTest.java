@@ -19,13 +19,13 @@ import java.io.File;
 public class AlexnetTest {
     public static void main(String[] args) {
         try {
-            	    	CUDAModules.initContext();
+            	    	// CUDAModules.initContext();
             AlexnetTest alexnet = new AlexnetTest();
             	    	alexnet.alexNet_mnist();
             // alexnet.alexNet_cifar10();
         } finally {
             // TODO: handle finally clause
-            CUDAMemoryManager.free();
+            // CUDAMemoryManager.free();
         }
     }
 

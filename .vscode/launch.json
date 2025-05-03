@@ -3,6 +3,34 @@
     "configurations": [
       {
         "type": "java",
+        "name": "Demo",
+        "request": "launch",
+        "mainClass": "com.omega.self.Demo",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
+        "name": "ASRTest",
+        "request": "launch",
+        "mainClass": "com.omega.example.asr.test.ASRTest",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
+        "name": "BPTest",
+        "request": "launch",
+        "mainClass": "com.omega.example.bp.test.BPTest",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
+        "name": "CharRNN",
+        "request": "launch",
+        "mainClass": "com.omega.example.rnn.test.CharRNN",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
         "name": "CudaTest",
         "request": "launch",
         "mainClass": "com.omega.example.alexnet.test.CudaTest",
