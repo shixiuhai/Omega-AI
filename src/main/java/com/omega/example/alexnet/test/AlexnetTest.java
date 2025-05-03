@@ -12,13 +12,14 @@ import com.omega.engine.optimizer.MBSGDOptimizer;
 import com.omega.engine.optimizer.lr.LearnRateUpdate;
 import com.omega.engine.pooling.PoolingType;
 import com.omega.engine.updater.UpdaterType;
+import com.omega.engine.gpu.CUDAModules;
 
 import java.io.File;
 
 public class AlexnetTest {
     public static void main(String[] args) {
         try {
-            	    	// CUDAModules.initContext();
+            	    	CUDAModules.initContext();
             AlexnetTest alexnet = new AlexnetTest();
             	    	alexnet.alexNet_mnist();
             // alexnet.alexNet_cifar10();

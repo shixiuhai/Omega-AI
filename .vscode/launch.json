@@ -1,0 +1,28 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "java",
+        "name": "CudaTest",
+        "request": "launch",
+        "mainClass": "com.omega.example.alexnet.test.CudaTest",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
+        "name": "AlexnetTest",
+        "request": "launch",
+        "mainClass": "com.omega.example.alexnet.test.AlexnetTest",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
+        "name": "Launch JCuda RNN Example",
+        "request": "launch",
+        "mainClass": "com.omega.example.rnn.test.JCudnnRnnExample",
+        "vmArgs": "-Djava.library.path=C:/libs/jcuda_runtime",
+        "cwd": "${workspaceFolder}"
+      }
+    ]
+  }
+  
