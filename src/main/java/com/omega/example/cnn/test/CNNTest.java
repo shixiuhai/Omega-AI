@@ -21,8 +21,8 @@ public class CNNTest {
         try {
             //	    	CUDAModules.initContext();
             CNNTest cnn = new CNNTest();
-            //	    	cnn.cnnNetwork_mnist();
-            cnn.cnnNetwork_cifar10();
+            	    	cnn.cnnNetwork_mnist();
+            // cnn.cnnNetwork_cifar10();
         } finally {
             // TODO: handle finally clause
             CUDAMemoryManager.free();
