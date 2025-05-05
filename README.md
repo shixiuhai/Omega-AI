@@ -1,8 +1,21 @@
 ![输入图片说明](images/512.png)
 
+
 # 自己打造一个深度学习框架 for java
 
-##  前言
+## 开发环境
+- 测试环境：Windows下WSL2 Ubuntu22.04
+- CUDA Toolkit版本：11.7 (下载地址：https://developer.nvidia.com/cuda-11-7-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=runfile_local)
+- cuDNN版本：对应CUDA 11.x (下载地址：https://developer.nvidia.com/rdp/cudnn-archive)
+  - 下载cuDNN tar包后，复制到/usr/local/cuda的lib和include目录下
+
+## 开发环境
+- 测试环境：Windows下WSL2 Ubuntu22.04
+- CUDA Toolkit版本：11.7 (下载地址：https://developer.nvidia.com/cuda-11-7-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=runfile_local)
+- cuDNN版本：对应CUDA 11.x (下载地址：https://developer.nvidia.com/rdp/cudnn-archive)
+  - 下载cuDNN tar包后，复制到/usr/local/cuda的lib和include目录下
+
+## 前言
 从2016年开始利用空余时间研究深度学习的方面，由于工作的原因，最熟悉的编程语言就是java，所以框架的编程语言自然而然就使用了java。自己打造框架的初衷就是为了更加深入了解各个算法、模型、实现的原理和思路，同时让java开发者更加容易接触AI领域。
 ## 框架介绍
 Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经网络，实现训练或测试模型，支持多GPU训练。框架目前支持BP神经网络、卷积神经网络、循环神经网络、vgg16、resnet、yolo、lstm、transformer、gpt、llama、diffusion、stable diffusion等模型的构建，目前引擎最新版本支持CUDA和CUDNN两种GPU加速方式，关于GPU加速的环境配置与jcuda版本jar包的对应依赖，引擎中所实现的模型和算法除了使用cuda和cudnn相关依赖包之外均不使用任何api和第三方依赖包。欢迎添加QQ群([119593195]())进行技术讨论和交流，别忘了给Omega-AI项目点个star，项目需要你们的支持。
@@ -26,7 +39,8 @@ Omega-AI：基于java打造的深度学习框架，帮助你快速搭建神经�
 nvcc --version
 ```
 ##### 2.安装CUDA与CUDNN
-https://developer.nvidia.com/cuda-toolkit-archive
+- CUDA Toolkit 11.7: https://developer.nvidia.com/cuda-11-7-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=runfile_local
+- cuDNN: https://developer.nvidia.com/rdp/cudnn-archive (选择对应CUDA 11.x版本)
 ##### 3.引入或下载与当前CUDA版本对应的omega-engine包
 [win-cu-x.x 版本包列表](#版本依赖包)
 ```xml
@@ -1715,8 +1729,9 @@ http://119.3.123.193:8011/AICar
 7.新增BPE（byte pair encode）tokenizer编码器实现.
 
 
-## 欢迎打扰
+## 项目维护
 
-### QQ：465973119
-### 技术交流QQ群：119593195
-### 电子邮箱：465973119@qq.com
+本项目是Omega-AI深度学习框架的一个fork版本，由当前维护者继续开发和维护。
+
+### 原项目地址：
+[https://github.com/dromara/Omega-AI](https://github.com/dromara/Omega-AI)

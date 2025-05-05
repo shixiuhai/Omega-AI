@@ -1,7 +1,3 @@
-# 环境
-* win10
-* visual studio 2019 c++环境
-* jdk1.8
 # Omega-AI
 
 #### Description
