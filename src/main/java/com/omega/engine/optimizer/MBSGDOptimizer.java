@@ -1137,7 +1137,7 @@ public class MBSGDOptimizer extends Optimizer {
     public void trainObjectRecognition(BaseData trainingData, BaseData validata, boolean dataEnhance) {
         // TODO Auto-generated method stub
         try {
-            CUDAModules.initCUDAFunctions();
+            // CUDAModules.initCUDAFunctions();
             this.dataSize = trainingData.number;
             if (isWarmUp()) {
                 this.network.learnRate = (float) (this.lr * Math.pow(batchIndex * 1.0f / burnIn * 1.0f, power));

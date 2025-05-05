@@ -3,6 +3,13 @@
     "configurations": [
       {
         "type": "java",
+        "name": "YoloV3Test",
+        "request": "launch",
+        "mainClass": "com.omega.example.yolo.test.YoloV3Test",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
         "name": "YoloV1Test",
         "request": "launch",
         "mainClass": "com.omega.example.yolo.test.YoloV1Test",

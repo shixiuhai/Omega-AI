@@ -134,11 +134,11 @@ public class YoloV3Test {
         int batchSize = 64;
         int class_num = 1;
         try {
-            String cfg_path = "H:\\voc\\banana-detection\\yolov3-tiny-banana.cfg";
-            String trainPath = "H:\\voc\\banana-detection\\bananas_train\\images";
-            String trainLabelPath = "H:\\voc\\banana-detection\\bananas_train\\label.csv";
-            String testPath = "H:\\voc\\banana-detection\\bananas_val\\images";
-            String testLabelPath = "H:\\voc\\banana-detection\\bananas_val\\label.csv";
+            String cfg_path = "/mnt/e/nowTime/nowTime/java/Omega-AI/src/main/resources/conf/yolov3-tiny-banana.cfg";
+            String trainPath = "/mnt/d/BaiduNetdiskDownload/banana-detection/banana-detection/bananas_train/images";
+            String trainLabelPath = "/mnt/d/BaiduNetdiskDownload/banana-detection/banana-detection/bananas_train/label.csv";
+            String testPath = "/mnt/d/BaiduNetdiskDownload/banana-detection/banana-detection/bananas_val/images";
+            String testLabelPath = "/mnt/d/BaiduNetdiskDownload/banana-detection/banana-detection/bananas_val/label.csv";
             YoloDataTransform2 dt = new YoloDataTransform2(class_num, DataType.yolov3, 90);
             DetectionDataLoader trainData = new DetectionDataLoader(trainPath, trainLabelPath, LabelFileType.csv, im_w, im_h, class_num, batchSize, DataType.yolov3, dt);
             DetectionDataLoader vailData = new DetectionDataLoader(testPath, testLabelPath, LabelFileType.csv, im_w, im_h, class_num, batchSize, DataType.yolov3);
