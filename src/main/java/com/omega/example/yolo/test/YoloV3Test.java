@@ -104,21 +104,11 @@ public class YoloV3Test {
 
     public static void main(String[] args) {
         try {
-            //			CUDAModules.initContext();
+       
             YoloV3Test y = new YoloV3Test();
-            //			y.yolov3_tiny_voc();
-            			y.yolov3_tiny();
-            //			y.getAnchors();
-            //			y.yolov3_show();
-            //			y.createTrainTestDataSet();
-            //			y.yolov3_show();
-            //			y.yolov3_show2();
-            //			y.createMaskTrainTestDataSet();
-//            y.yolov3_tiny_mask();
-            //			y.yolov3_tiny_helmet();
-            //			y.yolov3_tiny_yz();
-            //			y.yolov3_tiny_voc();
-            //			y.yolov3_tiny_sm();
+          
+            y.yolov3_tiny();
+          
         } catch (Exception e) {
             // TODO: handle exception
             e.printStackTrace();

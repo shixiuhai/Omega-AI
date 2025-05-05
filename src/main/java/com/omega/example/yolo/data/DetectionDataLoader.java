@@ -143,6 +143,7 @@ public class DetectionDataLoader extends BaseDataLoader {
                 loadLabelDataForTXT();
                 break;
             case csv:
+                // 图片和后缀在这个方法里拼接完成
                 loadLabelDataForCSV();
                 break;
             default:

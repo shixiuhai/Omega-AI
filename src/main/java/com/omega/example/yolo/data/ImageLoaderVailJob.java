@@ -1,8 +1,11 @@
 package com.omega.example.yolo.data;
 
+import java.io.File;
 import com.omega.common.data.Tensor;
 import com.omega.example.yolo.utils.OMImage;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveAction;
@@ -58,14 +61,21 @@ public class ImageLoaderVailJob extends RecursiveAction {
 
     private void load() {
         for (int i = getStart(); i <= getEnd(); i++) {
+            // if (getIdxSet() == null || indexs == null || indexs[i] >= getIdxSet().length) {
+            //     throw new RuntimeException("Invalid index or idxSet is null");
+            // }
             String key = getIdxSet()[indexs[i]];
-            String imagePath = getPath() + "/" + key + "." + getExtName();
+            // String imagePath = getPath() + "/" + key + "." + getExtName();
+            String imagePath = getPath() + "/" + key;
+            // if (!new File(imagePath).exists()) {
+            //     throw new RuntimeException("Image file not found: " + imagePath);
+            // }
             OMImage orig = ImageLoader.loadImage(imagePath);
             float[] labelBoxs = this.orgLabelData.get(key);
             float[] labelXYWH = null;
-            if (labelBoxs != null) {
-                labelXYWH = ImageLoader.formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
-            }
+            // if (labelBoxs != null) {
+            //     labelXYWH = ImageLoader.formatXYWH(labelBoxs, orig.getWidth(), orig.getHeight());
+            // }
             ImageLoader.loadVailDataDetection(input, label, i, orig, labelXYWH, input.width, input.height, boxes, classes);
         }
     }
@@ -139,4 +149,3 @@ public class ImageLoaderVailJob extends RecursiveAction {
         this.idxSet = idxSet;
     }
 }
-

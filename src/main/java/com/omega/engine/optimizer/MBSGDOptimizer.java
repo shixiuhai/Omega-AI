@@ -1495,9 +1495,7 @@ public class MBSGDOptimizer extends Optimizer {
     }
 
     public void trainObjectRecognitionOutputs(DetectionDataLoader trainingData, DetectionDataLoader valiData) {
-        // TODO Auto-generated method stub
         try {
-            //			CUDAModules.initCUDAFunctions();
             OutputsNetwork network = (OutputsNetwork) this.network;
             this.dataSize = trainingData.number;
             if (isWarmUp()) {
