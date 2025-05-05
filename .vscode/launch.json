@@ -6,7 +6,8 @@
         "name": "YoloV3Test",
         "request": "launch",
         "mainClass": "com.omega.example.yolo.test.YoloV3Test",
-        "projectName": "omega-engine-v4-gpu"
+        "projectName": "omega-engine-v4-gpu",
+        "vmArgs": "-Xms512m -Xmx4g -XX:+UseG1GC"
       },
       {
         "type": "java",

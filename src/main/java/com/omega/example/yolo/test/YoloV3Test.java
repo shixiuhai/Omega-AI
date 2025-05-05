@@ -154,7 +154,7 @@ public class YoloV3Test {
              *
              */
             List<YoloBox> draw_bbox = optimizer.showObjectRecognitionYoloV3(vailData, batchSize);
-            String outputPath = "H:\\voc\\banana-detection\\test_yolov3\\";
+            String outputPath = "/mnt/e/nowTime/nowTime/java/Omega-AI/test_result";
             showImg(outputPath, vailData, class_num, draw_bbox, batchSize, false, im_w, im_h, null);
         } catch (Exception e) {
             // TODO: handle exception
