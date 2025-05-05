@@ -3,6 +3,20 @@
     "configurations": [
       {
         "type": "java",
+        "name": "YoloV1Test",
+        "request": "launch",
+        "mainClass": "com.omega.example.yolo.test.YoloV1Test",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
+        "name": "WeightTest",
+        "request": "launch",
+        "mainClass": "com.omega.example.yolo.test.WeightTest",
+        "projectName": "omega-engine-v4-gpu"
+      },
+      {
+        "type": "java",
         "name": "Demo",
         "request": "launch",
         "mainClass": "com.omega.self.Demo",
